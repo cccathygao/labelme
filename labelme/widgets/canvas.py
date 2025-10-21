@@ -43,6 +43,7 @@ class Canvas(QtWidgets.QWidget):
     vertexSelected = QtCore.pyqtSignal(bool)
     mouseMoved = QtCore.pyqtSignal(QPointF)
     statusUpdated = QtCore.pyqtSignal(str)
+    iouUpdated = QtCore.pyqtSignal(float)
 
     CREATE, EDIT = 0, 1
 
@@ -117,6 +118,10 @@ class Canvas(QtWidgets.QWidget):
         self.hShapeIsSelected = False
         self._painter = QtGui.QPainter()
         self._cursor = CURSOR_DEFAULT
+        self.ground_truth_mask = None
+        self.image_shape = None
+        self._last_iou = 0.0
+
         # Menus:
         # 0: right-click without selection and dragging of shapes
         # 1: right-click with selection and dragging of shapes
@@ -450,6 +455,8 @@ class Canvas(QtWidgets.QWidget):
             self.restoreCursor()
             self.unHighlight()
         self.vertexSelected.emit(self.hVertex is not None)
+        if self.drawing() and self.current and self.ground_truth_mask is not None:
+            self.calculate_and_emit_iou()
         self._update_status(extra_messages=status_messages)
 
     def addPointToEdge(self):
@@ -487,6 +494,8 @@ class Canvas(QtWidgets.QWidget):
                     # Add point to existing shape.
                     if self.createMode == "polygon":
                         self.current.addPoint(self.line[1])
+                        if self.ground_truth_mask is not None:
+                            self.calculate_and_emit_iou()
                         self.line[0] = self.current[-1]
                         if self.current.isClosed():
                             self.finalise()
@@ -870,6 +879,9 @@ class Canvas(QtWidgets.QWidget):
         self.current = None
         self.setHiding(False)
         self.newShape.emit()
+        if self.ground_truth_mask is not None:
+            self._last_iou = 0.0
+            self.iouUpdated.emit(0.0)
         self.update()
 
     def closeEnough(self, p1, p2):
@@ -1033,6 +1045,8 @@ class Canvas(QtWidgets.QWidget):
         else:
             self.current = None
             self.drawingPolygon.emit(False)
+        if self.ground_truth_mask is not None:
+            self.calculate_and_emit_iou()
         self.update()
 
     def loadPixmap(self, pixmap, clear_shapes=True):
@@ -1073,6 +1087,156 @@ class Canvas(QtWidgets.QWidget):
         self.pixmap = QtGui.QPixmap()
         self.shapesBackups = []
         self.update()
+        
+    def set_ground_truth_mask(self, mask: np.ndarray) -> None:
+        """Set the ground truth mask for IoU calculation."""
+        self.ground_truth_mask = mask
+        self.image_shape = mask.shape[:2]
+        logger.info(f"Ground truth mask set with shape: {mask.shape}")
+
+    def _get_current_preview_points(self) -> list:
+        """
+        Get points for the polygon preview including the current mouse position.
+        Returns list of [x, y] coordinates.
+        """
+        if not self.current:
+            return []
+        
+        points = [[p.x(), p.y()] for p in self.current.points]
+        
+        # Add the line endpoint (current mouse position) if we're drawing
+        if self.drawing() and len(self.line.points) > 1:
+            points.append([self.line.points[1].x(), self.line.points[1].y()])
+        
+        return points
+
+    def calculate_and_emit_iou(self) -> None:
+        """
+        Calculate IoU between current drawing and ground truth, then emit signal.
+        This should be called from mouseMoveEvent, mousePressEvent, and undoLastPoint.
+        """
+        if self.ground_truth_mask is None:
+            return
+        
+        if not self.drawing():
+            return
+        
+        if self.createMode not in ['polygon', 'rectangle', 'circle', 'linestrip']:
+            return
+        
+        iou = self._calculate_current_iou()
+        
+        # Only emit if IoU changed (avoid unnecessary updates)
+        if abs(iou - self._last_iou) > 0.001:
+            self._last_iou = iou
+            self.iouUpdated.emit(iou)
+
+    def _calculate_current_iou(self) -> float:
+        """
+        Calculate IoU between current drawing preview and ground truth.
+        Returns 0.0 if no valid polygon can be formed.
+        """
+        if self.ground_truth_mask is None or not self.current:
+            return 0.0
+        
+        try:
+            points = self._get_current_preview_points()
+            
+            # Need at least 3 points for polygon
+            if len(points) < 3 and self.createMode in ['polygon', 'linestrip']:
+                return 0.0
+            
+            # Need at least 2 points for rectangle/circle
+            if len(points) < 2 and self.createMode in ['rectangle', 'circle']:
+                return 0.0
+            
+            # Import here to avoid circular imports
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Determine shape type for mask conversion
+            shape_type = None
+            if self.createMode == 'rectangle':
+                shape_type = 'rectangle'
+                points = points[:2]  # Only use first two points for rectangle
+            elif self.createMode == 'circle':
+                shape_type = 'circle'
+                points = points[:2]  # Only use first two points for circle
+            elif self.createMode in ['polygon', 'linestrip']:
+                shape_type = None  # Will be treated as polygon
+            
+            # Create mask from current preview points
+            current_mask = shape_to_mask(
+                img_shape=self.ground_truth_mask.shape,
+                points=points,
+                shape_type=shape_type
+            )
+            
+            # Calculate IoU
+            iou = calculate_iou(self.ground_truth_mask, current_mask)
+            return iou
+            
+        except Exception as e:
+            logger.debug(f"Error calculating IoU: {e}")
+            return 0.0
+
+    def calculate_shape_iou(self, shape: Shape) -> float:
+        """
+        Calculate IoU for an existing shape against ground truth.
+        Used for shapes loaded from JSON files.
+        
+        Args:
+            shape: Shape object to calculate IoU for
+            
+        Returns:
+            IoU value between 0 and 1, or 0.0 if calculation fails
+        """
+        if self.ground_truth_mask is None:
+            return 0.0
+        
+        try:
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Get points from shape
+            points = [[p.x(), p.y()] for p in shape.points]
+            
+            # Handle mask type shapes
+            if shape.shape_type == 'mask' and shape.mask is not None:
+                # For mask type, we need to place it in the correct location
+                img_shape = self.ground_truth_mask.shape
+                shape_mask = np.zeros(img_shape, dtype=bool)
+                
+                if len(points) >= 2:
+                    (x1, y1), (x2, y2) = points[0], points[1]
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                    
+                    # Ensure coordinates are within bounds
+                    x1 = max(0, min(x1, img_shape[1] - 1))
+                    y1 = max(0, min(y1, img_shape[0] - 1))
+                    x2 = max(0, min(x2, img_shape[1]))
+                    y2 = max(0, min(y2, img_shape[0]))
+                    
+                    if x2 > x1 and y2 > y1:
+                        shape_mask[y1:y2, x1:x2] = shape.mask[:y2-y1, :x2-x1]
+                
+                iou = calculate_iou(self.ground_truth_mask, shape_mask)
+                return iou
+            
+            # Handle regular shapes (polygon, rectangle, circle, etc.)
+            if len(points) < 2:
+                return 0.0
+            
+            shape_mask = shape_to_mask(
+                img_shape=self.ground_truth_mask.shape,
+                points=points,
+                shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+            )
+            
+            iou = calculate_iou(self.ground_truth_mask, shape_mask)
+            return iou
+            
+        except Exception as e:
+            logger.error(f"Error calculating shape IoU: {e}")
+            return 0.0
 
 
 def _update_shape_with_sam(

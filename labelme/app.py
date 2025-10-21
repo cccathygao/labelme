@@ -107,6 +107,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._noSelectionSlot = False
 
         self._copied_shapes = None
+        
+        self.ground_truth_file = None
+        self.ground_truth_shapes = []
+        self.shapes_iou_cache = {}  # Cache IoU values for existing shapes
 
         # Main widgets and related state.
         self.labelDialog = LabelDialog(
@@ -196,6 +200,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.shapeMoved.connect(self.setDirty)
         self.canvas.selectionChanged.connect(self.shapeSelectionChanged)
         self.canvas.drawingPolygon.connect(self.toggleDrawingSensitive)
+        self.canvas.iouUpdated.connect(self.updateIoUDisplay)
 
         self.setCentralWidget(scrollArea)
 
@@ -596,6 +601,14 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         if self._config["canvas"]["fill_drawing"]:
             fill_drawing.trigger()
+            
+        loadGroundTruth = action(
+            text=self.tr("Load Ground Truth"),
+            slot=self.loadGroundTruthDialog,
+            shortcut="Ctrl+G",
+            icon="open",
+            tip=self.tr("Load ground truth annotation for IoU comparison"),
+        )
 
         # Label list context menu.
         labelMenu = QtWidgets.QMenu()
@@ -673,6 +686,7 @@ class MainWindow(QtWidgets.QMainWindow):
             brightnessContrast=brightnessContrast,
             openNextImg=openNextImg,
             openPrevImg=openPrevImg,
+            loadGroundTruth=loadGroundTruth,
         )
         self.on_shapes_present_actions = (saveAs, hideAll, showAll, toggleAll)
 
@@ -772,6 +786,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 close,
                 deleteFile,
                 None,
+                loadGroundTruth,  # Add this line
+                None, # added
                 quit,
             ),
         )
@@ -859,6 +875,36 @@ class MainWindow(QtWidgets.QMainWindow):
         ai_prompt_action = QtWidgets.QWidgetAction(self)
         ai_prompt_action.setDefaultWidget(self._ai_prompt_widget)
 
+        # IoU display widget
+        self.iou_widget = QtWidgets.QWidget()
+        iou_layout = QtWidgets.QHBoxLayout()
+        iou_layout.setContentsMargins(5, 0, 5, 0)
+
+        iou_label = QtWidgets.QLabel(self.tr("IoU:"))
+        iou_label.setStyleSheet("font-weight: bold;")
+        iou_layout.addWidget(iou_label)
+
+        self.iou_value_label = QtWidgets.QLabel("--")
+        self.iou_value_label.setStyleSheet(
+            "font-size: 14px; padding: 2px 8px; background-color: #f0f0f0; "
+            "border-radius: 3px; min-width: 60px;"
+        )
+        self.iou_value_label.setAlignment(Qt.AlignCenter)
+        iou_layout.addWidget(self.iou_value_label)
+
+        # Button to show IoU for all shapes
+        self.show_all_iou_btn = QtWidgets.QPushButton(self.tr("All"))
+        self.show_all_iou_btn.setToolTip(self.tr("Show IoU for all shapes"))
+        self.show_all_iou_btn.setMaximumWidth(40)
+        self.show_all_iou_btn.clicked.connect(self.showAllShapesIoU)
+        iou_layout.addWidget(self.show_all_iou_btn)
+
+        self.iou_widget.setLayout(iou_layout)
+        self.iou_widget.setVisible(False)  # Hidden until ground truth is loaded
+
+        iou_widget_action = QtWidgets.QWidgetAction(self)
+        iou_widget_action.setDefaultWidget(self.iou_widget)
+
         self.tools = self.toolbar("Tools")
         self.toolbar_actions = (
             open_,
@@ -881,6 +927,7 @@ class MainWindow(QtWidgets.QMainWindow):
             selectAiModel,
             None,
             ai_prompt_action,
+            iou_widget_action,  # Add IoU widget here
         )
 
         self.status_left = QtWidgets.QLabel(self.tr("%s started.") % __appname__)
@@ -1783,6 +1830,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggleActions(True)
         self.canvas.setFocus()
         self.show_status_message(self.tr("Loaded %s") % osp.basename(filename))
+        # After loading shapes, recalculate IoU if ground truth exists
+        if self.canvas.ground_truth_mask is not None:
+            self.calculateExistingShapesIoU()
+
         return True
 
     def resizeEvent(self, event):
@@ -2249,3 +2300,245 @@ class MainWindow(QtWidgets.QMainWindow):
                     images.append(relativePath)
         images = natsort.os_sorted(images)
         return images
+
+    def loadGroundTruthDialog(self):
+        """Open dialog to select ground truth JSON file."""
+        if not self.mayContinue():
+            return
+        
+        path = osp.dirname(str(self.filename)) if self.filename else "."
+        filters = self.tr("Label files (*%s)") % LabelFile.suffix
+        
+        fileDialog = FileDialogPreview(self)
+        fileDialog.setFileMode(FileDialogPreview.ExistingFile)
+        fileDialog.setNameFilter(filters)
+        fileDialog.setWindowTitle(self.tr("%s - Choose Ground Truth File") % __appname__)
+        fileDialog.setWindowFilePath(path)
+        fileDialog.setViewMode(FileDialogPreview.Detail)
+        
+        if fileDialog.exec_():
+            fileName = fileDialog.selectedFiles()[0]
+            if fileName:
+                self.loadGroundTruth(fileName)
+
+
+    def loadGroundTruth(self, filename):
+        """Load ground truth annotation from JSON file."""
+        try:
+            # Load label file
+            label_file = LabelFile(filename)
+            self.ground_truth_file = filename
+            self.ground_truth_shapes = label_file.shapes
+            
+            # Check if image is loaded
+            if not self.image or self.image.isNull():
+                self.errorMessage(
+                    self.tr("No Image Loaded"),
+                    self.tr("Please load an image first before loading ground truth.")
+                )
+                return
+            
+            img_shape = (self.image.height(), self.image.width())
+            combined_mask = np.zeros(img_shape, dtype=bool)
+            
+            # Combine all ground truth polygons into one mask
+            for shape_dict in self.ground_truth_shapes:
+                points = shape_dict["points"]
+                shape_type = shape_dict.get("shape_type", "polygon")
+                
+                if shape_type == "mask" and shape_dict.get("mask") is not None:
+                    # Handle mask type
+                    mask = shape_dict["mask"]
+                    (x1, y1), (x2, y2) = np.asarray(points).astype(int)
+                    
+                    # Ensure coordinates are within bounds
+                    x1 = max(0, min(x1, img_shape[1] - 1))
+                    y1 = max(0, min(y1, img_shape[0] - 1))
+                    x2 = max(0, min(x2, img_shape[1]))
+                    y2 = max(0, min(y2, img_shape[0]))
+                    
+                    if x2 > x1 and y2 > y1:
+                        mask_h, mask_w = mask.shape
+                        combined_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = np.logical_or(
+                            combined_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)],
+                            mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                        )
+                else:
+                    # Handle polygon/rectangle/circle types
+                    mask = utils.shape_to_mask(img_shape, points, shape_type)
+                    combined_mask = np.logical_or(combined_mask, mask)
+            
+            # Set ground truth in canvas
+            self.canvas.set_ground_truth_mask(combined_mask)
+            
+            # Show IoU widget
+            self.iou_widget.setVisible(True)
+            
+            # Calculate IoU for all existing shapes
+            self.calculateExistingShapesIoU()
+            
+            # Show status message
+            self.show_status_message(
+                self.tr("Ground truth loaded: %s") % osp.basename(filename)
+            )
+            
+            logger.info(f"Ground truth loaded from: {filename}")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.errorMessage(
+                self.tr("Error loading ground truth"),
+                self.tr("<b>%s</b>") % str(e)
+            )
+
+
+    def calculateExistingShapesIoU(self):
+        """Calculate IoU for all existing shapes against ground truth."""
+        if self.canvas.ground_truth_mask is None:
+            return
+        
+        self.shapes_iou_cache.clear()
+        
+        for item in self.labelList:
+            shape = item.shape()
+            if shape:
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+                logger.debug(f"Shape '{shape.label}' IoU: {iou:.4f}")
+        
+        logger.info(f"Calculated IoU for {len(self.shapes_iou_cache)} shapes")
+
+
+    def showAllShapesIoU(self):
+        """Display IoU values for all existing shapes in a dialog."""
+        if not self.shapes_iou_cache and self.canvas.ground_truth_mask is not None:
+            self.calculateExistingShapesIoU()
+        
+        if not self.shapes_iou_cache:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("No Shapes"),
+                self.tr("No shapes found to calculate IoU.\n"
+                    "Please ensure ground truth is loaded and shapes exist.")
+            )
+            return
+        
+        # Create dialog
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("IoU for All Shapes"))
+        dialog.setMinimumWidth(400)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Create table
+        table = QtWidgets.QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels([self.tr("Label"), self.tr("Type"), self.tr("IoU")])
+        table.setRowCount(len(self.shapes_iou_cache))
+        
+        # Populate table
+        row = 0
+        for item in self.labelList:
+            shape = item.shape()
+            if shape and id(shape) in self.shapes_iou_cache:
+                iou = self.shapes_iou_cache[id(shape)]
+                
+                # Label
+                label_item = QtWidgets.QTableWidgetItem(shape.label)
+                table.setItem(row, 0, label_item)
+                
+                # Type
+                type_item = QtWidgets.QTableWidgetItem(shape.shape_type)
+                table.setItem(row, 1, type_item)
+                
+                # IoU with color coding
+                iou_item = QtWidgets.QTableWidgetItem(f"{iou*100:.1f}%")
+                iou_item.setTextAlignment(Qt.AlignCenter)
+                
+                # Color code based on IoU
+                if iou >= 0.8:
+                    iou_item.setBackground(QtGui.QColor("#d4edda"))
+                    iou_item.setForeground(QtGui.QColor("#155724"))
+                elif iou >= 0.6:
+                    iou_item.setBackground(QtGui.QColor("#fff3cd"))
+                    iou_item.setForeground(QtGui.QColor("#856404"))
+                elif iou >= 0.4:
+                    iou_item.setBackground(QtGui.QColor("#ffe5b4"))
+                    iou_item.setForeground(QtGui.QColor("#8b4513"))
+                else:
+                    iou_item.setBackground(QtGui.QColor("#f8d7da"))
+                    iou_item.setForeground(QtGui.QColor("#721c24"))
+                
+                table.setItem(row, 2, iou_item)
+                row += 1
+        
+        table.resizeColumnsToContents()
+        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        layout.addWidget(table)
+        
+        # Add statistics
+        if self.shapes_iou_cache:
+            iou_values = list(self.shapes_iou_cache.values())
+            avg_iou = np.mean(iou_values)
+            max_iou = np.max(iou_values)
+            min_iou = np.min(iou_values)
+            
+            stats_label = QtWidgets.QLabel(
+                f"<b>{self.tr('Statistics')}:</b><br>"
+                f"{self.tr('Average IoU')}: {avg_iou*100:.1f}%<br>"
+                f"{self.tr('Maximum IoU')}: {max_iou*100:.1f}%<br>"
+                f"{self.tr('Minimum IoU')}: {min_iou*100:.1f}%"
+            )
+            layout.addWidget(stats_label)
+        
+        # Close button
+        close_btn = QtWidgets.QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+
+    def updateIoUDisplay(self, iou_value: float):
+        """Update IoU display with new value (for currently drawing shape)."""
+        if iou_value == 0.0:
+            self.iou_value_label.setText("--")
+            self.iou_value_label.setStyleSheet(
+                "font-size: 14px; padding: 2px 8px; "
+                "background-color: #f0f0f0; border-radius: 3px; "
+                "min-width: 60px;"
+            )
+        else:
+            # Display IoU as percentage
+            iou_percent = iou_value * 100
+            self.iou_value_label.setText(f"{iou_percent:.1f}%")
+            
+            # Color coding
+            if iou_percent >= 80:
+                bg_color, text_color = "#d4edda", "#155724"  # Green
+            elif iou_percent >= 60:
+                bg_color, text_color = "#fff3cd", "#856404"  # Yellow
+            elif iou_percent >= 40:
+                bg_color, text_color = "#ffe5b4", "#8b4513"  # Orange
+            else:
+                bg_color, text_color = "#f8d7da", "#721c24"  # Red
+            
+            self.iou_value_label.setStyleSheet(
+                f"font-size: 14px; padding: 2px 8px; "
+                f"background-color: {bg_color}; color: {text_color}; "
+                f"border-radius: 3px; min-width: 60px; font-weight: bold;"
+            )
+
+
+    def resetGroundTruth(self):
+        """Reset ground truth state."""
+        self.ground_truth_file = None
+        self.ground_truth_shapes = []
+        self.shapes_iou_cache.clear()
+        self.canvas.ground_truth_mask = None
+        self.canvas._last_iou = 0.0
+        self.iou_widget.setVisible(False)
+        self.iou_value_label.setText("--")
+

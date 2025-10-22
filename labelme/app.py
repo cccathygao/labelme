@@ -201,6 +201,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.selectionChanged.connect(self.shapeSelectionChanged)
         self.canvas.drawingPolygon.connect(self.toggleDrawingSensitive)
         self.canvas.iouUpdated.connect(self.updateIoUDisplay)
+        print(f'cathy debug: IoU signal connected to updateIouDisplay')
 
         self.setCentralWidget(scrollArea)
 
@@ -877,6 +878,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # IoU display widget
         self.iou_widget = QtWidgets.QWidget()
+        print(f'cathy debug: created iou_widget{self.iou_widget}')
         iou_layout = QtWidgets.QHBoxLayout()
         iou_layout.setContentsMargins(5, 0, 5, 0)
 
@@ -900,10 +902,14 @@ class MainWindow(QtWidgets.QMainWindow):
         iou_layout.addWidget(self.show_all_iou_btn)
 
         self.iou_widget.setLayout(iou_layout)
-        self.iou_widget.setVisible(False)  # Hidden until ground truth is loaded
+        self.iou_widget.setVisible(True)  # Hidden until ground truth is loaded
+        
+        print(f'cathy debug: iou_widget visible {self.iou_widget.isVisible()}')
 
         iou_widget_action = QtWidgets.QWidgetAction(self)
         iou_widget_action.setDefaultWidget(self.iou_widget)
+        
+        print(f'cathy debug: created iou_widget_action: {iou_widget_action}')
 
         self.tools = self.toolbar("Tools")
         self.toolbar_actions = (
@@ -913,6 +919,8 @@ class MainWindow(QtWidgets.QMainWindow):
             openNextImg,
             save,
             deleteFile,
+            None, # separator
+            iou_widget_action,  # Add IoU widget here
             None,
             createMode,
             editMode,
@@ -927,7 +935,6 @@ class MainWindow(QtWidgets.QMainWindow):
             selectAiModel,
             None,
             ai_prompt_action,
-            iou_widget_action,  # Add IoU widget here
         )
 
         self.status_left = QtWidgets.QLabel(self.tr("%s started.") % __appname__)
@@ -2324,6 +2331,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def loadGroundTruth(self, filename):
         """Load ground truth annotation from JSON file."""
+        print(f'cathy debug: loadGroundTruth called')
         try:
             # Load label file
             label_file = LabelFile(filename)
@@ -2370,10 +2378,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Set ground truth in canvas
             self.canvas.set_ground_truth_mask(combined_mask)
-            
-            # Show IoU widget
-            self.iou_widget.setVisible(True)
-            
+
             # Calculate IoU for all existing shapes
             self.calculateExistingShapesIoU()
             
@@ -2503,8 +2508,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def updateIoUDisplay(self, iou_value: float):
         """Update IoU display with new value (for currently drawing shape)."""
+        
+        print(f'cathy debug: updateIoUDisplay is called, iou: {iou_value}')
+        
         if iou_value == 0.0:
-            self.iou_value_label.setText("--")
+            self.iou_value_label.setText("0.0")
             self.iou_value_label.setStyleSheet(
                 "font-size: 14px; padding: 2px 8px; "
                 "background-color: #f0f0f0; border-radius: 3px; "
@@ -2514,6 +2522,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Display IoU as percentage
             iou_percent = iou_value * 100
             self.iou_value_label.setText(f"{iou_percent:.1f}%")
+            print(f'cathy debug: set label text to {iou_percent:.1f}%')
             
             # Color coding
             if iou_percent >= 80:
@@ -2539,6 +2548,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.shapes_iou_cache.clear()
         self.canvas.ground_truth_mask = None
         self.canvas._last_iou = 0.0
-        self.iou_widget.setVisible(False)
+        self.iou_widget.setVisible(True)
         self.iou_value_label.setText("--")
 

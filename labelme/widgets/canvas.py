@@ -456,6 +456,7 @@ class Canvas(QtWidgets.QWidget):
             self.unHighlight()
         self.vertexSelected.emit(self.hVertex is not None)
         if self.drawing() and self.current and self.ground_truth_mask is not None:
+            print(f'cathy debug: mouseMoveEvent, called calculate IoU')
             self.calculate_and_emit_iou()
         self._update_status(extra_messages=status_messages)
 
@@ -1116,20 +1117,29 @@ class Canvas(QtWidgets.QWidget):
         This should be called from mouseMoveEvent, mousePressEvent, and undoLastPoint.
         """
         if self.ground_truth_mask is None:
+            print(f'cathy debug: no groundtruth mask')
             return
         
         if not self.drawing():
+            print(f'cathy debug: not drawing mode')
             return
         
         if self.createMode not in ['polygon', 'rectangle', 'circle', 'linestrip']:
+            print(f'cathy debug: not polygon')
             return
         
         iou = self._calculate_current_iou()
+        print(f'cathy debug: IoU calculated: {iou}')
         
         # Only emit if IoU changed (avoid unnecessary updates)
         if abs(iou - self._last_iou) > 0.001:
+            print(f'cathy debug: last IoU: {self._last_iou}')
             self._last_iou = iou
+            print(f'cathy debug: last IoU: {self._last_iou}')
+
             self.iouUpdated.emit(iou)
+        else:
+            print(f'cathy debug: IoU not changed')
 
     def _calculate_current_iou(self) -> float:
         """

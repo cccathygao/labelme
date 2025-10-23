@@ -65,8 +65,8 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir
     problem = entry['problem']
     segstr = entry['answer']  # Should be <seg>...</seg> string
     image_path = entry['images'][0][0]
-    image_height = entry.get('height')
-    image_width = entry.get('width')
+    image_height = entry['img_height']
+    image_width = entry['img_width']
     
     save_path = image_id + '_gt.png'
     
@@ -102,7 +102,7 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir
         "flags": {},
         "shapes": shapes,
         "imagePath": image_path,
-        "imageData": image_data_b64,
+        "imageData": None,
         "imageHeight": image_height,
         "imageWidth": image_width
     }

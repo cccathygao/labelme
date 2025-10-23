@@ -886,7 +886,7 @@ class MainWindow(QtWidgets.QMainWindow):
         iou_label.setStyleSheet("font-weight: bold;")
         iou_layout.addWidget(iou_label)
 
-        self.iou_value_label = QtWidgets.QLabel("--")
+        self.iou_value_label = QtWidgets.QLabel("0.0")
         self.iou_value_label.setStyleSheet(
             "font-size: 14px; padding: 2px 8px; background-color: #f0f0f0; "
             "border-radius: 3px; min-width: 60px;"

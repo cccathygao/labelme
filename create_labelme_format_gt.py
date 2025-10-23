@@ -115,7 +115,6 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir
     print(f"✓ Saved: {output_file}")
     return output_file
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Convert dataset entry to labelme format GT file"
@@ -130,8 +129,8 @@ def main():
     args = parser.parse_args()
     
     # Hardcoded paths
-    IMAGE_DIR = 'cathy_refseg_test'
-    OUTPUT_DIR = 'cathy_refseg_test'
+    IMAGE_DIR = 'cathy_refseg_test' #grefcoco_dataset/images
+    OUTPUT_DIR = 'cathy_refseg_test' #refseg/output/images, refseg/output/json
     DATASET_JSON = 'dataset.json'
     
     # Create output directory if it doesn't exist

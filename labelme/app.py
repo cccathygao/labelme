@@ -1323,14 +1323,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 shape.description = description
 
             self._update_shape_color(shape)
-            if shape.group_id is None:
-                r, g, b = shape.fill_color.getRgb()[:3]
-                item.setText(
-                    f"{html.escape(shape.label)} "
-                    f'<font color="#{r:02x}{g:02x}{b:02x}">●</font>'
-                )
-            else:
-                item.setText(f"{shape.label} ({shape.group_id})")
+            text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+            self._update_label_text_with_iou(item, shape, text)
+            
             self.setDirty()
             if self.uniqLabelList.find_label_item(shape.label) is None:
                 self.uniqLabelList.add_label_item(
@@ -1394,10 +1389,7 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setEnabled(True)
 
         self._update_shape_color(shape)
-        r, g, b = shape.fill_color.getRgb()[:3]
-        label_list_item.setText(
-            f'{html.escape(text)} <font color="#{r:02x}{g:02x}{b:02x}">●</font>'
-        )
+        self._update_label_text_with_iou(label_list_item, shape, text)
 
     def _update_shape_color(self, shape):
         r, g, b = self._get_rgb_by_label(shape.label)
@@ -1442,6 +1434,32 @@ class MainWindow(QtWidgets.QMainWindow):
         elif self._config["default_shape_color"]:
             return self._config["default_shape_color"]
         return (0, 255, 0)
+    
+    def _update_label_text_with_iou(self, label_list_item, shape, text):
+        """Update label list item text with IoU value if available."""
+        r, g, b = shape.fill_color.getRgb()[:3]
+        iou = self.shapes_iou_cache.get(id(shape), None)
+        
+        if iou is not None:
+            iou_text = f" [IoU: {iou*100:.1f}%]"
+            label_list_item.setText(
+                f'{html.escape(text)}{iou_text} <font color="#{r:02x}{g:02x}{b:02x}">●</font>'
+            )
+        else:
+            label_list_item.setText(
+                f'{html.escape(text)} <font color="#{r:02x}{g:02x}{b:02x}">●</font>'
+            )
+
+    def updateAllShapeIoUDisplays(self):
+        """Update IoU display for all shapes in the label list."""
+        for item in self.labelList:
+            shape = item.shape()
+            if shape.group_id is None:
+                text = shape.label
+            else:
+                text = f"{shape.label} ({shape.group_id})"
+                
+            self._update_label_text_with_iou(item, shape, text)
 
     def remLabels(self, shapes):
         for shape in shapes:
@@ -1497,6 +1515,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def format_shape(s):
             data = s.other_data.copy()
+            
+            # Add this line to get IoU
+            iou = self.shapes_iou_cache.get(id(s), None)
+            
             data.update(
                 dict(
                     label=s.label,
@@ -1505,9 +1527,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     description=s.description,
                     shape_type=s.shape_type,
                     flags=s.flags,
-                    mask=None
-                    if s.mask is None
-                    else utils.img_arr_to_b64(s.mask.astype(np.uint8)),
+                    mask=None if s.mask is None else utils.img_arr_to_b64(s.mask.astype(np.uint8)),
+                    iou=iou,  # Add this line
                 )
             )
             return data
@@ -1621,6 +1642,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions.undoLastPoint.setEnabled(False)
             self.actions.undo.setEnabled(True)
             self.setDirty()
+            if self.canvas.ground_truth_mask is not None:
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+                item = self.labelList.findItemByShape(shape)
+                if item:
+                    text_display = text if shape.group_id is None else f"{text} ({shape.group_id})"
+                    self._update_label_text_with_iou(item, shape, text_display)
         else:
             self.canvas.undoLastLine()
             self.canvas.shapesBackups.pop()
@@ -2413,7 +2441,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.debug(f"Shape '{shape.label}' IoU: {iou:.4f}")
         
         logger.info(f"Calculated IoU for {len(self.shapes_iou_cache)} shapes")
-
+        
+        # Add these lines
+        self.updateAllShapeIoUDisplays()
+        
 
     def showAllShapesIoU(self):
         """Display IoU values for all existing shapes in a dialog."""

@@ -1,0 +1,140 @@
+{
+    "categories": [
+        {
+            "id": 0,
+            "name": "Workers",
+            "supercategory": "none"
+        },
+        {
+            "id": 1,
+            "name": "head",
+            "supercategory": "Workers"
+        },
+        {
+            "id": 2,
+            "name": "helmet",
+            "supercategory": "Workers"
+        },
+        {
+            "id": 3,
+            "name": "person",
+            "supercategory": "Workers"
+        }
+    ],
+    "images": [
+        {
+            "id": 0,
+            "file_path": "0001.jpg",
+            "height": 275,
+            "width": 490
+        }
+    ],
+    "annotations": [
+        {
+            "id": 0,
+            "image_id": 0,
+            "category_id": 2,
+            "bbox": [
+                45,
+                2,
+                85,
+                85
+            ],
+            "area": 7225,
+            "segmentation": [
+                [
+                    482.62,
+                    241.81
+                ],
+                [
+                    480.64,
+                    213.07
+                ],
+                [
+                    484.6,
+                    198.2
+                ],
+                [
+                    512.35,
+                    184.33
+                ],
+                [
+                    518.3,
+                    179.37
+                ],
+                [
+                    505.42,
+                    160.54
+                ],
+                [
+                    497.49,
+                    138.74
+                ],
+                [
+                    508.39,
+                    105.05
+                ]
+            ],
+            "shape_type": "polygon",
+            "problem_type": {
+                "num_class": "1",
+                "num_instance": "N"
+            },
+            "error_type": "over-coverage",
+            "iou": 0.0
+        },
+        {
+            "id": 1,
+            "image_id": 0,
+            "category_id": 2,
+            "bbox": [
+                324,
+                29,
+                72,
+                81
+            ],
+            "area": 5832,
+            "segmentation": [
+                [
+                    482.62,
+                    241.81
+                ],
+                [
+                    480.64,
+                    213.07
+                ],
+                [
+                    484.6,
+                    198.2
+                ],
+                [
+                    512.35,
+                    184.33
+                ],
+                [
+                    518.3,
+                    179.37
+                ],
+                [
+                    505.42,
+                    160.54
+                ],
+                [
+                    497.49,
+                    138.74
+                ],
+                [
+                    508.39,
+                    105.05
+                ]
+            ],
+            "shape_type": "polygon",
+            "problem_type": {
+                "num_class": "1",
+                "num_instance": "N"
+            },
+            "error_type": "over-coverage",
+            "iou": 0.0
+        }
+    ]
+}

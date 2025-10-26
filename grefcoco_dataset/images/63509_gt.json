@@ -139,7 +139,7 @@
       "flags": {}
     }
   ],
-  "imagePath": "grefcoco_dataset/images/63509.png",
+  "imagePath": "grefcoco_dataset/images/63509_gt.png",
   "imageData": null,
   "imageHeight": 427,
   "imageWidth": 640

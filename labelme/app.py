@@ -201,6 +201,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.selectionChanged.connect(self.shapeSelectionChanged)
         self.canvas.drawingPolygon.connect(self.toggleDrawingSensitive)
         self.canvas.iouUpdated.connect(self.updateIoUDisplay)
+        self.canvas.shapeMoved.connect(self.updateShapeIoUCache)
         print(f'cathy debug: IoU signal connected to updateIouDisplay')
 
         self.setCentralWidget(scrollArea)
@@ -1046,7 +1047,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self._config["auto_save"] or self.actions.saveAuto.isChecked():
             assert self.imagePath
-            label_file = f"{osp.splitext(self.imagePath)[0]}.json"
+            if self.output_file:
+                label_file = self.output_file
+            else:
+                label_file = f"{osp.splitext(self.imagePath)[0]}.json"
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = osp.join(self.output_dir, label_file_without_path)
@@ -1516,19 +1520,19 @@ class MainWindow(QtWidgets.QMainWindow):
         def format_shape(s):
             data = s.other_data.copy()
             
-            # Add this line to get IoU
             iou = self.shapes_iou_cache.get(id(s), None)
             
             data.update(
                 dict(
                     label=s.label,
+                    error_type=s.label,
+                    iou=iou,
                     points=[(p.x(), p.y()) for p in s.points],
                     group_id=s.group_id,
                     description=s.description,
                     shape_type=s.shape_type,
                     flags=s.flags,
                     mask=None if s.mask is None else utils.img_arr_to_b64(s.mask.astype(np.uint8)),
-                    iou=iou,  # Add this line
                 )
             )
             return data
@@ -2571,6 +2575,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"border-radius: 3px; min-width: 60px; font-weight: bold;"
             )
 
+    def updateShapeIoUCache(self):
+        """Update IoU cache for shapes that were just moved."""
+        if self.canvas.ground_truth_mask is None:
+            return
+        
+        shapes_to_update = []
+        if self.canvas.hShape:
+            shapes_to_update.append(self.canvas.hShape)
+        
+        for shape in self.canvas.selectedShapes:
+            if shape and shape not in shapes_to_update:
+                shapes_to_update.append(shape)
+        
+        for shape in shapes_to_update:
+            iou = self.canvas.calculate_shape_iou(shape)
+            self.shapes_iou_cache[id(shape)] = iou
+            
+            item = self.labelList.findItemByShape(shape)
+            if item:
+                text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+                self._update_label_text_with_iou(item, shape, text)
 
     def resetGroundTruth(self):
         """Reset ground truth state."""

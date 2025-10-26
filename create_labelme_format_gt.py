@@ -44,15 +44,14 @@ def parse_segmentation_string(seg_string: str) -> List[List[List[float]]]:
     
     return all_shapes_points
 
-def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir):
+def convert_to_labelme_format(image_id, dataset_json_path, image_dir):
     """
     Convert referring segmentation dataset entry to labelme format.
     
     Args:
         image_id: Image ID (e.g., 63509)
         dataset_json_path: Path to dataset.json
-        image_dir: Directory containing images
-        output_dir: Directory to save output JSON files
+        image_dir: Directory containing images; also directory to save gt JSON files
     """
     # Load dataset
     with open(dataset_json_path, 'r') as f:
@@ -64,22 +63,13 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir
     # Extract data from entry
     problem = entry['problem']
     segstr = entry['answer']  # Should be <seg>...</seg> string
-    image_path = entry['images'][0][0]
+    image_path = entry['images'][0]
     image_height = entry['img_height']
     image_width = entry['img_width']
     
-    save_path = image_id + '_gt.png'
-    
-    full_image_path = osp.join(image_dir, image_path)
-    image_save_path = osp.join(output_dir, save_path)
-    original_image = Image.open(full_image_path)
-    original_image.save(image_save_path)
-    print(f'cathy debug: full_image_path: {full_image_path}')
-    print(f'cathy debug: image_save_path: {image_save_path}')
-    
     # Generate imageData
-    image_data_bytes = LabelFile.load_image_file(full_image_path)
-    image_data_b64 = base64.b64encode(image_data_bytes).decode('utf-8')
+    # image_data_bytes = LabelFile.load_image_file(image_path)
+    # image_data_b64 = base64.b64encode(image_data_bytes).decode('utf-8')
     
     # Parse the segmentation string
     all_shapes_points = parse_segmentation_string(segstr)
@@ -108,7 +98,7 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir, output_dir
     }
     
     # Save to file
-    output_file = osp.join(output_dir, f"{image_id}_gt.json")
+    output_file = osp.join(image_dir, f"{image_id}_gt.json")
     with open(output_file, 'w') as f:
         json.dump(labelme_data, f, indent=2, ensure_ascii=False)
     
@@ -129,21 +119,15 @@ def main():
     args = parser.parse_args()
     
     # Hardcoded paths
-    IMAGE_DIR = 'cathy_refseg_test' #grefcoco_dataset/images
-    OUTPUT_DIR = 'cathy_refseg_test' #refseg/output/images, refseg/output/json
-    DATASET_JSON = 'dataset.json'
-    
-    # Create output directory if it doesn't exist
-    import os
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    IMAGE_DIR = 'grefcoco_dataset/images'
+    DATASET_JSON = 'grefcoco_dataset/dataset.json'
     
     # Convert
     try:
         convert_to_labelme_format(
             image_id=args.image_id,
             dataset_json_path=DATASET_JSON,
-            image_dir=IMAGE_DIR,
-            output_dir=OUTPUT_DIR
+            image_dir=IMAGE_DIR
         )
     except Exception as e:
         print(f"✗ Error: {e}")

@@ -2,7 +2,12 @@ import argparse
 import json
 import os
 
-def labelme_to_coco(image_id, labelme_json_path, output_path):
+def labelme_to_coco(image_id, scene, num_class, num_instance):
+    labelme_json_path = f"grefcoco_dataset/images/{image_id}.json"
+    
+    if not os.path.exists(labelme_json_path):
+        raise FileNotFoundError(f"File not found: {labelme_json_path}")
+    
     with open(labelme_json_path, 'r') as f:
         data = json.load(f)
     
@@ -13,12 +18,12 @@ def labelme_to_coco(image_id, labelme_json_path, output_path):
             "data_source": "https://huggingface.co/datasets/qixiangbupt/grefcoco",
             "height": data['imageHeight'],
             "width": data['imageWidth'],
-            "scene": "", # from cmd arg
+            "scene": scene,
             "is_longtail": False,
             "task": "referring_segmentation",
-            "problem_type": { # from cmd arg
-                "num_class": "1",
-                "num_instance": "N"
+            "problem_type": {
+                "num_class": num_class,
+                "num_instance": num_instance
             }
         }],
         "annotations": []
@@ -48,6 +53,7 @@ def labelme_to_coco(image_id, labelme_json_path, output_path):
         
         output['annotations'].append(annotation)
     
+    output_path = f"output/{image_id}.json"
     with open(output_path, 'w') as f:
         json.dump(output, f, indent=4)
 
@@ -65,12 +71,32 @@ def main():
         required=True,
         help='Image ID to convert (e.g., 63509)'
     )
+    parser.add_argument(
+        '--scene',
+        type=str,
+        required=True,
+        help='Scene description'
+    )
+    parser.add_argument(
+        '--cls',
+        type=str,
+        required=True,
+        help='Num class'
+    )
+    parser.add_argument(
+        '--ins',
+        type=str,
+        required=True,
+        help='Num instance'
+    )
     
     args = parser.parse_args()
     
     labelme_to_coco(
         image_id=args.image_id,
-        image_dir=IMAGE_DIR
+        scene=args.scene, 
+        num_class=args.cls, 
+        num_instance=args.ins
     )
 
 if __name__ == "__main__":

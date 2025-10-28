@@ -611,6 +611,26 @@ class MainWindow(QtWidgets.QMainWindow):
             icon="open",
             tip=self.tr("Load ground truth annotation for IoU comparison"),
         )
+        
+        # calculate combined iou shortcut
+        calculateCombinedIoU = action(
+            text=self.tr("Calculate Combined IoU"),
+            slot=self.calculateCombinedShapesIoU,
+            shortcut="Ctrl+Shift+I",
+            icon="objects",
+            tip=self.tr("Calculate IoU for selected shapes combined"),
+        )
+        
+        # combine shapes shortcut
+        combineShapes = action(
+            text=self.tr("Combine Selected Shapes"),
+            slot=self.combineSelectedShapes,
+            shortcut="Ctrl+Shift+C",
+            icon="objects",
+            tip=self.tr("Combine selected shapes into multi-polygon with IoU calculation"),
+            enabled=False,
+        )
+
 
         # Label list context menu.
         labelMenu = QtWidgets.QMenu()
@@ -689,6 +709,8 @@ class MainWindow(QtWidgets.QMainWindow):
             openNextImg=openNextImg,
             openPrevImg=openPrevImg,
             loadGroundTruth=loadGroundTruth,
+            calculateCombinedIoU=calculateCombinedIoU,
+            combineShapes=combineShapes,
         )
         self.on_shapes_present_actions = (saveAs, hideAll, showAll, toggleAll)
 
@@ -759,6 +781,8 @@ class MainWindow(QtWidgets.QMainWindow):
             removePoint,
             None,
             toggle_keep_prev_mode,
+            None,
+            combineShapes,
         )
 
         self.canvas.vertexSelected.connect(self.actions.removePoint.setEnabled)
@@ -788,7 +812,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 close,
                 deleteFile,
                 None,
-                loadGroundTruth,  # Add this line
+                loadGroundTruth,
+                calculateCombinedIoU,
                 None, # added
                 quit,
             ),
@@ -1376,6 +1401,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.duplicate.setEnabled(n_selected)
         self.actions.copy.setEnabled(n_selected)
         self.actions.edit.setEnabled(n_selected)
+        self.actions.combineShapes.setEnabled(n_selected >= 2)
 
     def addLabel(self, shape):
         if shape.group_id is None:
@@ -1489,8 +1515,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 description=shape_dict["description"],
                 mask=shape_dict["mask"],
             )
-            for x, y in shape_dict["points"]:
-                shape.addPoint(QtCore.QPointF(x, y))
+            polygons = []
+            for polygon_coords in shape_dict["points"]:  # CHANGED: Iterate polygons
+                polygon_points = [QtCore.QPointF(x, y) for x, y in polygon_coords]
+                polygons.append(polygon_points)
+            
+            shape.points = polygons  # CHANGED: Set as list of polygons
             shape.close()
 
             default_flags = {}
@@ -1522,12 +1552,18 @@ class MainWindow(QtWidgets.QMainWindow):
             
             iou = self.shapes_iou_cache.get(id(s), None)
             
+            points_data = [
+                [(p.x(), p.y()) for p in polygon]
+                for polygon in s.points
+            ]
+
+            
             data.update(
                 dict(
                     label=s.label,
                     error_type=s.label,
                     iou=iou,
-                    points=[(p.x(), p.y()) for p in s.points],
+                    points=points_data,
                     group_id=s.group_id,
                     description=s.description,
                     shape_type=s.shape_type,
@@ -1869,6 +1905,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggleActions(True)
         self.canvas.setFocus()
         self.show_status_message(self.tr("Loaded %s") % osp.basename(filename))
+        # Auto-load ground truth if available
+        gt_filename = f"{osp.splitext(filename)[0]}.json"
+        if not gt_filename.endswith('_gt.json'):
+            gt_filename = f"{osp.splitext(filename)[0]}_gt.json"
+        if osp.exists(gt_filename):
+            self.loadGroundTruth(gt_filename)
+            print('groundtruth loaded:', gt_filename)
         # After loading shapes, recalculate IoU if ground truth exists
         if self.canvas.ground_truth_mask is not None:
             self.calculateExistingShapesIoU()
@@ -2067,12 +2110,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        if self.labelFile:
+        if self.output_file:
+            self._saveFile(self.output_file)
+        elif self.labelFile:
             # DL20180323 - overwrite when in directory
             self._saveFile(self.labelFile.filename)
-        elif self.output_file:
-            self._saveFile(self.output_file)
-            self.close()
         else:
             self._saveFile(self.saveFileDialog())
 
@@ -2596,6 +2638,294 @@ class MainWindow(QtWidgets.QMainWindow):
             if item:
                 text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
                 self._update_label_text_with_iou(item, shape, text)
+
+    def calculateCombinedShapesIoU(self):
+        """Calculate IoU for multiple selected shapes combined."""
+        if self.canvas.ground_truth_mask is None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("No Ground Truth"),
+                self.tr("Please load ground truth first before calculating combined IoU.")
+            )
+            return
+        
+        if not self.canvas.selectedShapes:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("No Shapes Selected"),
+                self.tr("Please select at least one shape to calculate combined IoU.")
+            )
+            return
+        
+        try:
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Get image shape
+            img_shape = self.canvas.ground_truth_mask.shape
+            
+            # Create combined mask
+            combined_mask = np.zeros(img_shape, dtype=bool)
+            
+            for shape in self.canvas.selectedShapes:
+                # Get points from shape
+                points = [[p.x(), p.y()] for p in shape.points]
+                
+                # Handle mask type shapes
+                if shape.shape_type == 'mask' and shape.mask is not None:
+                    shape_mask = np.zeros(img_shape, dtype=bool)
+                    
+                    if len(points) >= 2:
+                        (x1, y1), (x2, y2) = points[0], points[1]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        
+                        # Ensure coordinates are within bounds
+                        x1 = max(0, min(x1, img_shape[1] - 1))
+                        y1 = max(0, min(y1, img_shape[0] - 1))
+                        x2 = max(0, min(x2, img_shape[1]))
+                        y2 = max(0, min(y2, img_shape[0]))
+                        
+                        if x2 > x1 and y2 > y1:
+                            mask_h, mask_w = shape.mask.shape
+                            shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                else:
+                    # Handle regular shapes (polygon, rectangle, circle, etc.)
+                    if len(points) < 2:
+                        continue
+                    
+                    shape_mask = shape_to_mask(
+                        img_shape=img_shape,
+                        points=points,
+                        shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                    )
+                
+                # Combine masks using logical OR
+                combined_mask = np.logical_or(combined_mask, shape_mask)
+            
+            # Calculate IoU for combined mask
+            combined_iou = calculate_iou(self.canvas.ground_truth_mask, combined_mask)
+            
+            # Show result in a dialog
+            self._showCombinedIoUDialog(combined_iou, len(self.canvas.selectedShapes))
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.errorMessage(
+                self.tr("Error calculating combined IoU"),
+                self.tr("<b>%s</b>") % str(e)
+            )
+
+
+    def _showCombinedIoUDialog(self, combined_iou: float, num_shapes: int):
+        """Show dialog with combined IoU result."""
+        # Create dialog
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("Combined IoU"))
+        dialog.setMinimumWidth(350)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Title
+        title_label = QtWidgets.QLabel(
+            f"<h3>{self.tr('Combined IoU for Selected Shapes')}</h3>"
+        )
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Number of shapes
+        info_label = QtWidgets.QLabel(
+            f"{self.tr('Number of shapes combined')}: <b>{num_shapes}</b>"
+        )
+        layout.addWidget(info_label)
+        
+        # IoU value with color coding
+        iou_percent = combined_iou * 100
+        if iou_percent >= 80:
+            bg_color, text_color = "#d4edda", "#155724"  # Green
+        elif iou_percent >= 60:
+            bg_color, text_color = "#fff3cd", "#856404"  # Yellow
+        elif iou_percent >= 40:
+            bg_color, text_color = "#ffe5b4", "#8b4513"  # Orange
+        else:
+            bg_color, text_color = "#f8d7da", "#721c24"  # Red
+        
+        iou_label = QtWidgets.QLabel(f"<h2>{iou_percent:.2f}%</h2>")
+        iou_label.setAlignment(Qt.AlignCenter)
+        iou_label.setStyleSheet(
+            f"background-color: {bg_color}; color: {text_color}; "
+            f"padding: 20px; border-radius: 5px; font-weight: bold;"
+        )
+        layout.addWidget(iou_label)
+        
+        # Individual shape IoUs (if cached)
+        if self.shapes_iou_cache:
+            layout.addSpacing(10)
+            details_label = QtWidgets.QLabel(
+                f"<b>{self.tr('Individual Shape IoUs')}:</b>"
+            )
+            layout.addWidget(details_label)
+            
+            table = QtWidgets.QTableWidget()
+            table.setColumnCount(2)
+            table.setHorizontalHeaderLabels([self.tr("Label"), self.tr("IoU")])
+            table.setRowCount(len(self.canvas.selectedShapes))
+            
+            for row, shape in enumerate(self.canvas.selectedShapes):
+                # Label
+                label_item = QtWidgets.QTableWidgetItem(shape.label)
+                table.setItem(row, 0, label_item)
+                
+                # Individual IoU
+                individual_iou = self.shapes_iou_cache.get(id(shape), 0.0)
+                iou_item = QtWidgets.QTableWidgetItem(f"{individual_iou*100:.1f}%")
+                iou_item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row, 1, iou_item)
+            
+            table.resizeColumnsToContents()
+            table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+            table.setMaximumHeight(150)
+            layout.addWidget(table)
+        
+        # Close button
+        close_btn = QtWidgets.QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def combineSelectedShapes(self):
+        """Combine selected shapes into a new multi-polygon shape with IoU calculation."""
+        if self.canvas.ground_truth_mask is None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("No Ground Truth"),
+                self.tr("Please load ground truth first before combining shapes.")
+            )
+            return
+        
+        if len(self.canvas.selectedShapes) < 2:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("Insufficient Shapes"),
+                self.tr("Please select at least 2 shapes to combine.")
+            )
+            return
+        
+        try:
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Calculate combined IoU
+            img_shape = self.canvas.ground_truth_mask.shape
+            combined_mask = np.zeros(img_shape, dtype=bool)
+            
+            # Collect all polygons
+            all_polygons = []
+            for shape in self.canvas.selectedShapes:
+                # Each shape.points is list[list[QPointF]]
+                # Add all polygons from this shape
+                for polygon in shape.points:
+                    if polygon:  # Skip empty polygons
+                        all_polygons.append(polygon)
+                
+                # Build combined mask for IoU calculation
+                for polygon in shape.points:
+                    points = [[p.x(), p.y()] for p in polygon]
+                    
+                    if shape.shape_type == 'mask' and shape.mask is not None:
+                        shape_mask = np.zeros(img_shape, dtype=bool)
+                        if len(points) >= 2:
+                            (x1, y1), (x2, y2) = points[0], points[1]
+                            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                            x1 = max(0, min(x1, img_shape[1] - 1))
+                            y1 = max(0, min(y1, img_shape[0] - 1))
+                            x2 = max(0, min(x2, img_shape[1]))
+                            y2 = max(0, min(y2, img_shape[0]))
+                            if x2 > x1 and y2 > y1:
+                                mask_h, mask_w = shape.mask.shape
+                                shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                    elif len(points) >= 2:
+                        shape_mask = shape_to_mask(
+                            img_shape=img_shape,
+                            points=points,
+                            shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                        )
+                    else:
+                        continue
+                    
+                    combined_mask = np.logical_or(combined_mask, shape_mask)
+            
+            # Calculate IoU
+            combined_iou = calculate_iou(self.canvas.ground_truth_mask, combined_mask)
+            
+            # Prompt user for label
+            text, flags, group_id, description = self.labelDialog.popUp(
+                text=f"combined_{len(all_polygons)}_polygons"
+            )
+            
+            if text is None:
+                # User cancelled
+                return
+            
+            # Validate label
+            if not self.validateLabel(text):
+                self.errorMessage(
+                    self.tr("Invalid label"),
+                    self.tr("Invalid label '{}' with validation type '{}'").format(
+                        text, self._config["validate_label"]
+                    ),
+                )
+                return
+            
+            # Create new polygon shape
+            new_shape = Shape(
+                label=text,
+                shape_type="polygon",
+                flags=flags,
+                group_id=group_id,
+                description=description
+            )
+            
+            # Set all polygons directly to points
+            new_shape.points = all_polygons
+            new_shape.close()
+            
+            # Store shapes before adding new one
+            self.canvas.storeShapes()
+            
+            # Add the new shape
+            self.canvas.shapes.append(new_shape)
+            self.addLabel(new_shape)
+            
+            # Store IoU in cache
+            self.shapes_iou_cache[id(new_shape)] = combined_iou
+            
+            # Update the label display with IoU
+            item = self.labelList.findItemByShape(new_shape)
+            if item:
+                display_text = text if group_id is None else f"{text} ({group_id})"
+                self._update_label_text_with_iou(item, new_shape, display_text)
+            
+            # Mark as dirty and update
+            self.setDirty()
+            self.canvas.update()
+            
+            # Show success message with IoU
+            self.show_status_message(
+                self.tr(f"Combined {len(all_polygons)} polygons. IoU: {combined_iou*100:.1f}%"),
+                delay=5000
+            )
+            
+            logger.info(f"Created combined shape '{text}' with {len(all_polygons)} polygons, IoU: {combined_iou:.4f}")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.errorMessage(
+                self.tr("Error combining shapes"),
+                self.tr("<b>%s</b>") % str(e)
+            )
+
 
     def resetGroundTruth(self):
         """Reset ground truth state."""

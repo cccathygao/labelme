@@ -28,7 +28,7 @@ def open(name, mode):
 
 class ShapeDict(TypedDict):
     label: str
-    points: list[list[float]]
+    points: list[list[list[float]]]
     shape_type: str
     flags: dict[str, bool]
     description: str
@@ -54,18 +54,17 @@ def _load_shape_json_obj(shape_json_obj: dict) -> ShapeDict:
     )
     label: str = shape_json_obj["label"]
 
-    assert "points" in shape_json_obj, f"points is required: {shape_json_obj}"
-    assert isinstance(shape_json_obj["points"], list), (
-        f"points must be list: {shape_json_obj['points']}"
-    )
-    assert shape_json_obj["points"], f"points must be non-empty: {shape_json_obj}"
-    assert all(
-        isinstance(point, list)
-        and len(point) == 2
-        and all(isinstance(xy, (int, float)) for xy in point)
-        for point in shape_json_obj["points"]
-    ), f"points must be list of [x, y]: {shape_json_obj['points']}"
-    points: list[list[float]] = shape_json_obj["points"]
+    points = shape_json_obj["points"]
+    for polygon in points:
+        assert isinstance(polygon, list) and polygon, (
+            f"Each polygon must be a non-empty list: {polygon}"
+        )
+        assert all(
+            isinstance(point, list)
+            and len(point) == 2
+            and all(isinstance(xy, (int, float)) for xy in point)
+            for point in polygon
+        ), f"Each point must be [x, y]: {polygon}"
 
     assert "shape_type" in shape_json_obj, f"shape_type is required: {shape_json_obj}"
     assert isinstance(shape_json_obj["shape_type"], str), (

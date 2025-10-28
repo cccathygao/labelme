@@ -390,11 +390,15 @@ class Canvas(QtWidgets.QWidget):
                 self.boundedMoveVertex(pos)
                 self.repaint()
                 self.movingShape = True
+                if self.ground_truth_mask is not None and self.hShape:
+                    self.calculate_and_emit_shape_iou(self.hShape)
             elif self.selectedShapes and self.prevPoint:
                 self.overrideCursor(CURSOR_MOVE)
                 self.boundedMoveShapes(self.selectedShapes, pos)
                 self.repaint()
                 self.movingShape = True
+                if self.ground_truth_mask is not None and self.selectedShapes:
+                    self.calculate_and_emit_shape_iou(self.selectedShapes[0])
             return
 
         # Just hovering over the canvas, 2 possibilities:
@@ -599,6 +603,9 @@ class Canvas(QtWidgets.QWidget):
             if self.shapesBackups[-1][index].points != self.shapes[index].points:
                 self.storeShapes()
                 self.shapeMoved.emit()
+                if self.ground_truth_mask is not None:
+                    self._last_iou = 0.0
+                    self.iouUpdated.emit(0.0)
 
             self.movingShape = False
         self._update_status()
@@ -1205,48 +1212,58 @@ class Canvas(QtWidgets.QWidget):
         
         try:
             from labelme.utils import shape_to_mask, calculate_iou
-            
+        
+            img_shape = self.ground_truth_mask.shape
+            combined_mask = np.zeros(img_shape, dtype=bool)
+
             # Get points from shape
-            points = [[p.x(), p.y()] for p in shape.points]
-            
-            # Handle mask type shapes
-            if shape.shape_type == 'mask' and shape.mask is not None:
-                # For mask type, we need to place it in the correct location
-                img_shape = self.ground_truth_mask.shape
-                shape_mask = np.zeros(img_shape, dtype=bool)
+            for polygon_points in shape.points:
+                points = [[p.x(), p.y()] for p in polygon_points]
                 
-                if len(points) >= 2:
-                    (x1, y1), (x2, y2) = points[0], points[1]
-                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                    
-                    # Ensure coordinates are within bounds
-                    x1 = max(0, min(x1, img_shape[1] - 1))
-                    y1 = max(0, min(y1, img_shape[0] - 1))
-                    x2 = max(0, min(x2, img_shape[1]))
-                    y2 = max(0, min(y2, img_shape[0]))
-                    
-                    if x2 > x1 and y2 > y1:
-                        shape_mask[y1:y2, x1:x2] = shape.mask[:y2-y1, :x2-x1]
-                
-                iou = calculate_iou(self.ground_truth_mask, shape_mask)
-                return iou
-            
-            # Handle regular shapes (polygon, rectangle, circle, etc.)
-            if len(points) < 2:
-                return 0.0
-            
-            shape_mask = shape_to_mask(
-                img_shape=self.ground_truth_mask.shape,
-                points=points,
-                shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
-            )
-            
-            iou = calculate_iou(self.ground_truth_mask, shape_mask)
+                if shape.shape_type == 'mask' and shape.mask is not None:
+                    # Handle mask type
+                    if len(points) >= 2:
+                        (x1, y1), (x2, y2) = points[0], points[1]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        x1 = max(0, min(x1, img_shape[1] - 1))
+                        y1 = max(0, min(y1, img_shape[0] - 1))
+                        x2 = max(0, min(x2, img_shape[1]))
+                        y2 = max(0, min(y2, img_shape[0]))
+                        if x2 > x1 and y2 > y1:
+                            mask_h, mask_w = shape.mask.shape
+                            shape_mask = np.zeros(img_shape, dtype=bool)
+                            shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                            combined_mask = np.logical_or(combined_mask, shape_mask)
+                    elif len(points) >= 2:
+                        # Handle regular polygon
+                        polygon_mask = shape_to_mask(
+                            img_shape=img_shape,
+                            points=points,
+                            shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                        )
+                        combined_mask = np.logical_or(combined_mask, polygon_mask)
+
+            iou = calculate_iou(self.ground_truth_mask, combined_mask)
+            print(f'cathy debug: calculate iou for combined shape {iou}')
             return iou
             
         except Exception as e:
             logger.error(f"Error calculating shape IoU: {e}")
             return 0.0
+
+    def calculate_and_emit_shape_iou(self, shape: Shape) -> None:
+        """Calculate IoU for a specific shape and emit signal."""
+        if self.ground_truth_mask is None or not self.editing():
+            return
+        
+        try:
+            iou = self.calculate_shape_iou(shape)
+            if abs(iou - self._last_iou) > 0.001:
+                self._last_iou = iou
+                self.iouUpdated.emit(iou)
+        except Exception as e:
+            logger.debug(f"Error calculating shape IoU during edit: {e}")
+
 
 
 def _update_shape_with_sam(

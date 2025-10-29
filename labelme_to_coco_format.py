@@ -62,10 +62,6 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
     with open(output_path, 'w') as f:
         json.dump(output, f, indent=4)
 
-# # Usage
-# labelme_to_coco('cathy_refseg_test/96857_gt.json', 'output_coco.json')
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Convert dataset entry to labelme format GT file"

@@ -119,7 +119,7 @@ def main():
     args = parser.parse_args()
     
     # Hardcoded paths
-    IMAGE_DIR = 'grefcoco_dataset/images'
+    IMAGE_DIR = 'output/'
     DATASET_JSON = 'grefcoco_dataset/dataset.json'
     
     # Convert

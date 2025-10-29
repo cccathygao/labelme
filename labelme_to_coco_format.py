@@ -3,7 +3,7 @@ import json
 import os
 
 def labelme_to_coco(image_id, scene, num_class, num_instance):
-    labelme_json_path = f"grefcoco_dataset/images/{image_id}.json"
+    labelme_json_path = f"output/{image_id}.json"
     
     if not os.path.exists(labelme_json_path):
         raise FileNotFoundError(f"File not found: {labelme_json_path}")
@@ -14,13 +14,15 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
     output = {
         "images": [{
             "id": image_id,
-            "file_path": data['imagePath'],
+            "file_path": data['imagePath'].replace("_gt", ""),
             "data_source": "https://huggingface.co/datasets/qixiangbupt/grefcoco",
             "height": data['imageHeight'],
             "width": data['imageWidth'],
             "scene": scene,
+            "is_crowd": False,
             "is_longtail": False,
             "task": "referring_segmentation",
+            "problem": data['problem'],
             "problem_type": {
                 "num_class": num_class,
                 "num_instance": num_instance
@@ -38,6 +40,9 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         # x_min, x_max = min(xs), max(xs)
         # y_min, y_max = min(ys), max(ys)
         # bbox = [x_min, y_min, x_max - x_min, y_max - y_min]
+        
+        error_type = None if shape['error_type'] == data['problem'] else shape['error_type']
+        iou = None if shape['error_type'] == data['problem'] else shape['iou']
  
         annotation = {
             "id": ann_id,
@@ -45,15 +50,15 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
             "category_id": None,
             "bbox": None,
             "area": None,
-            "segmentation": points,
             "shape_type": shape['shape_type'],
-            "error_type": shape['error_type'],
-            "iou": shape['iou']
+            "error_type": error_type,
+            "iou": iou,
+            "segmentation": points
         }
         
         output['annotations'].append(annotation)
     
-    output_path = f"output/{image_id}.json"
+    output_path = f"coco_format/{image_id}.json"
     with open(output_path, 'w') as f:
         json.dump(output, f, indent=4)
 

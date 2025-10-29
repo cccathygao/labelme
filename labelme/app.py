@@ -1881,6 +1881,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggleActions(True)
         self.canvas.setFocus()
         self.show_status_message(self.tr("Loaded %s") % osp.basename(filename))
+        # Auto-load ground truth if available
+        gt_filename = f"{osp.splitext(filename)[0]}.json"
+        if not gt_filename.endswith('_gt.json'):
+            gt_filename = f"{osp.splitext(filename)[0]}_gt.json"
+        if osp.exists(gt_filename):
+            self.loadGroundTruth(gt_filename)
+            print('groundtruth loaded:', gt_filename)
         # After loading shapes, recalculate IoU if ground truth exists
         if self.canvas.ground_truth_mask is not None:
             self.calculateExistingShapesIoU()
@@ -2079,12 +2086,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        if self.labelFile:
+        if self.output_file:
+            self._saveFile(self.output_file)
+        elif self.labelFile:
             # DL20180323 - overwrite when in directory
             self._saveFile(self.labelFile.filename)
-        elif self.output_file:
-            self._saveFile(self.output_file)
-            self.close()
         else:
             self._saveFile(self.saveFileDialog())
 

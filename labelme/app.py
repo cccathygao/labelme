@@ -611,6 +611,15 @@ class MainWindow(QtWidgets.QMainWindow):
             icon="open",
             tip=self.tr("Load ground truth annotation for IoU comparison"),
         )
+        
+        calculateCombinedIoU = action(
+            text=self.tr("Calculate Combined IoU"),
+            slot=self.calculateCombinedShapesIoU,
+            shortcut="Ctrl+Shift+I",
+            icon="objects",
+            tip=self.tr("Calculate IoU for selected shapes combined"),
+        )
+
 
         # Label list context menu.
         labelMenu = QtWidgets.QMenu()
@@ -689,6 +698,7 @@ class MainWindow(QtWidgets.QMainWindow):
             openNextImg=openNextImg,
             openPrevImg=openPrevImg,
             loadGroundTruth=loadGroundTruth,
+            calculateCombinedIoU=calculateCombinedIoU,
         )
         self.on_shapes_present_actions = (saveAs, hideAll, showAll, toggleAll)
 
@@ -788,7 +798,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 close,
                 deleteFile,
                 None,
-                loadGroundTruth,  # Add this line
+                loadGroundTruth,
+                calculateCombinedIoU,
                 None, # added
                 quit,
             ),
@@ -922,6 +933,7 @@ class MainWindow(QtWidgets.QMainWindow):
             deleteFile,
             None, # separator
             iou_widget_action,  # Add IoU widget here
+            calculateCombinedIoU,
             None,
             createMode,
             editMode,
@@ -2596,6 +2608,161 @@ class MainWindow(QtWidgets.QMainWindow):
             if item:
                 text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
                 self._update_label_text_with_iou(item, shape, text)
+
+    def calculateCombinedShapesIoU(self):
+        """Calculate IoU for multiple selected shapes combined."""
+        if self.canvas.ground_truth_mask is None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("No Ground Truth"),
+                self.tr("Please load ground truth first before calculating combined IoU.")
+            )
+            return
+        
+        if not self.canvas.selectedShapes:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("No Shapes Selected"),
+                self.tr("Please select at least one shape to calculate combined IoU.")
+            )
+            return
+        
+        try:
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Get image shape
+            img_shape = self.canvas.ground_truth_mask.shape
+            
+            # Create combined mask
+            combined_mask = np.zeros(img_shape, dtype=bool)
+            
+            for shape in self.canvas.selectedShapes:
+                # Get points from shape
+                points = [[p.x(), p.y()] for p in shape.points]
+                
+                # Handle mask type shapes
+                if shape.shape_type == 'mask' and shape.mask is not None:
+                    shape_mask = np.zeros(img_shape, dtype=bool)
+                    
+                    if len(points) >= 2:
+                        (x1, y1), (x2, y2) = points[0], points[1]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        
+                        # Ensure coordinates are within bounds
+                        x1 = max(0, min(x1, img_shape[1] - 1))
+                        y1 = max(0, min(y1, img_shape[0] - 1))
+                        x2 = max(0, min(x2, img_shape[1]))
+                        y2 = max(0, min(y2, img_shape[0]))
+                        
+                        if x2 > x1 and y2 > y1:
+                            mask_h, mask_w = shape.mask.shape
+                            shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                else:
+                    # Handle regular shapes (polygon, rectangle, circle, etc.)
+                    if len(points) < 2:
+                        continue
+                    
+                    shape_mask = shape_to_mask(
+                        img_shape=img_shape,
+                        points=points,
+                        shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                    )
+                
+                # Combine masks using logical OR
+                combined_mask = np.logical_or(combined_mask, shape_mask)
+            
+            # Calculate IoU for combined mask
+            combined_iou = calculate_iou(self.canvas.ground_truth_mask, combined_mask)
+            
+            # Show result in a dialog
+            self._showCombinedIoUDialog(combined_iou, len(self.canvas.selectedShapes))
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.errorMessage(
+                self.tr("Error calculating combined IoU"),
+                self.tr("<b>%s</b>") % str(e)
+            )
+
+
+    def _showCombinedIoUDialog(self, combined_iou: float, num_shapes: int):
+        """Show dialog with combined IoU result."""
+        # Create dialog
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("Combined IoU"))
+        dialog.setMinimumWidth(350)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Title
+        title_label = QtWidgets.QLabel(
+            f"<h3>{self.tr('Combined IoU for Selected Shapes')}</h3>"
+        )
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Number of shapes
+        info_label = QtWidgets.QLabel(
+            f"{self.tr('Number of shapes combined')}: <b>{num_shapes}</b>"
+        )
+        layout.addWidget(info_label)
+        
+        # IoU value with color coding
+        iou_percent = combined_iou * 100
+        if iou_percent >= 80:
+            bg_color, text_color = "#d4edda", "#155724"  # Green
+        elif iou_percent >= 60:
+            bg_color, text_color = "#fff3cd", "#856404"  # Yellow
+        elif iou_percent >= 40:
+            bg_color, text_color = "#ffe5b4", "#8b4513"  # Orange
+        else:
+            bg_color, text_color = "#f8d7da", "#721c24"  # Red
+        
+        iou_label = QtWidgets.QLabel(f"<h2>{iou_percent:.2f}%</h2>")
+        iou_label.setAlignment(Qt.AlignCenter)
+        iou_label.setStyleSheet(
+            f"background-color: {bg_color}; color: {text_color}; "
+            f"padding: 20px; border-radius: 5px; font-weight: bold;"
+        )
+        layout.addWidget(iou_label)
+        
+        # Individual shape IoUs (if cached)
+        if self.shapes_iou_cache:
+            layout.addSpacing(10)
+            details_label = QtWidgets.QLabel(
+                f"<b>{self.tr('Individual Shape IoUs')}:</b>"
+            )
+            layout.addWidget(details_label)
+            
+            table = QtWidgets.QTableWidget()
+            table.setColumnCount(2)
+            table.setHorizontalHeaderLabels([self.tr("Label"), self.tr("IoU")])
+            table.setRowCount(len(self.canvas.selectedShapes))
+            
+            for row, shape in enumerate(self.canvas.selectedShapes):
+                # Label
+                label_item = QtWidgets.QTableWidgetItem(shape.label)
+                table.setItem(row, 0, label_item)
+                
+                # Individual IoU
+                individual_iou = self.shapes_iou_cache.get(id(shape), 0.0)
+                iou_item = QtWidgets.QTableWidgetItem(f"{individual_iou*100:.1f}%")
+                iou_item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row, 1, iou_item)
+            
+            table.resizeColumnsToContents()
+            table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+            table.setMaximumHeight(150)
+            layout.addWidget(table)
+        
+        # Close button
+        close_btn = QtWidgets.QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     def resetGroundTruth(self):
         """Reset ground truth state."""

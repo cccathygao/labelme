@@ -111,6 +111,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ground_truth_file = None
         self.ground_truth_shapes = []
         self.shapes_iou_cache = {}  # Cache IoU values for existing shapes
+        self.next_shape_id = 0 # Counter for assigning shape ids
+        self.combined_shapes = [] # List of combined shape records
 
         # Main widgets and related state.
         self.labelDialog = LabelDialog(
@@ -142,6 +144,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.shape_dock = QtWidgets.QDockWidget(self.tr("Polygon Labels"), self)
         self.shape_dock.setObjectName("Labels")
         self.shape_dock.setWidget(self.labelList)
+        
+        # Combined Shapes List Widget
+        self.combinedShapesList = QtWidgets.QListWidget()
+        self.combinedShapesList.setToolTip(
+            self.tr("Combined shapes with their IoU values")
+        )
+        self.combined_shapes_dock = QtWidgets.QDockWidget(self.tr("Combined Shapes"), self)
+        self.combined_shapes_dock.setObjectName("Combined Shapes")
+        self.combined_shapes_dock.setWidget(self.combinedShapesList)
 
         self.uniqLabelList = UniqueLabelQListWidget()
         self.uniqLabelList.setToolTip(
@@ -218,10 +229,17 @@ class MainWindow(QtWidgets.QMainWindow):
             if self._config[dock]["show"] is False:
                 getattr(self, dock).setVisible(False)
 
+        self.combined_shapes_dock.setFeatures( 
+            QtWidgets.QDockWidget.DockWidgetClosable | 
+            QtWidgets.QDockWidget.DockWidgetFloatable | 
+            QtWidgets.QDockWidget.DockWidgetMovable 
+        )
+        
         self.addDockWidget(Qt.RightDockWidgetArea, self.flag_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.file_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.combined_shapes_dock)
 
         # Actions
         action = functools.partial(utils.newAction, self)
@@ -1178,6 +1196,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.labelFile = None
         self.otherData = None
         self.canvas.resetState()
+        self.next_shape_id = 0
+        self.combined_shapes = []  
+        self.combinedShapesList.clear()  
+
 
     def currentItem(self):
         items = self.labelList.selectedItems()
@@ -1339,8 +1361,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 shape.description = description
 
             self._update_shape_color(shape)
-            text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+            if shape.group_id is None:
+                text = f"[{shape.shape_id}] {shape.label}"
+            else:
+                text = f"[{shape.shape_id}] {shape.label} ({shape.group_id})"
             self._update_label_text_with_iou(item, shape, text)
+
             
             self.setDirty()
             if self.uniqLabelList.find_label_item(shape.label) is None:
@@ -1388,14 +1414,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.duplicate.setEnabled(n_selected)
         self.actions.copy.setEnabled(n_selected)
         self.actions.edit.setEnabled(n_selected)
-
+        
     def addLabel(self, shape):
+        # Assign ID if not already set
+        if shape.shape_id is None:
+            shape.shape_id = self.next_shape_id
+            self.next_shape_id += 1
+        
+        # Create display text with ID
         if shape.group_id is None:
-            text = shape.label
+            text = f"[{shape.shape_id}] {shape.label}"
         else:
-            text = f"{shape.label} ({shape.group_id})"
+            text = f"[{shape.shape_id}] {shape.label} ({shape.group_id})"
+        
         label_list_item = LabelListWidgetItem(text, shape)
         self.labelList.addItem(label_list_item)
+    
         if self.uniqLabelList.find_label_item(shape.label) is None:
             self.uniqLabelList.add_label_item(
                 label=shape.label, color=self._get_rgb_by_label(label=shape.label)
@@ -1453,6 +1487,14 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _update_label_text_with_iou(self, label_list_item, shape, text):
         """Update label list item text with IoU value if available."""
+        # Ensure text includes shape ID
+        if not text.startswith('['):
+            shape_id = shape.shape_id if shape.shape_id is not None else "?"
+            if shape.group_id is None:
+                text = f"[{shape_id}] {shape.label}"
+            else:
+                text = f"[{shape_id}] {shape.label} ({shape.group_id})"
+        
         r, g, b = shape.fill_color.getRgb()[:3]
         iou = self.shapes_iou_cache.get(id(shape), None)
         
@@ -1494,13 +1536,17 @@ class MainWindow(QtWidgets.QMainWindow):
         shapes: list[Shape] = []
         shape_dict: ShapeDict
         for shape_dict in shape_dicts:
+            # shape id
+            shape_id = shape_dict["other_data"].get('id')
             shape: Shape = Shape(
                 label=shape_dict["label"],
                 shape_type=shape_dict["shape_type"],
                 group_id=shape_dict["group_id"],
                 description=shape_dict["description"],
                 mask=shape_dict["mask"],
+                shape_id=shape_id,
             )
+   
             for x, y in shape_dict["points"]:
                 shape.addPoint(QtCore.QPointF(x, y))
             shape.close()
@@ -1536,6 +1582,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             data.update(
                 dict(
+                    id=s.shape_id,  # ADD THIS
                     label=s.label,
                     error_type=s.label,
                     iou=iou,
@@ -1551,12 +1598,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         shapes = [format_shape(item.shape()) for item in self.labelList]
         flags = {}
-        for i in range(self.flag_widget.count()):  # type: ignore[union-attr]
-            item = self.flag_widget.item(i)  # type: ignore[union-attr]
+        for i in range(self.flag_widget.count()):
+            item = self.flag_widget.item(i)
             assert item
             key = item.text()
             flag = item.checkState() == Qt.Checked
             flags[key] = flag
+        
+        # Prepare other data with combined shapes
+        other_data_to_save = self.otherData.copy() if self.otherData else {}
+        other_data_to_save['combinedShapes'] = self.combined_shapes  # ADD THIS
+        
         try:
             assert self.imagePath
             imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
@@ -1570,9 +1622,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 imageData=imageData,
                 imageHeight=self.image.height(),
                 imageWidth=self.image.width(),
-                otherData=self.otherData,
+                otherData=other_data_to_save,  # MODIFIED THIS
                 flags=flags,
             )
+
             self.labelFile = lf
             items = self.fileListWidget.findItems(self.imagePath, Qt.MatchExactly)
             if len(items) > 0:
@@ -1851,11 +1904,33 @@ class MainWindow(QtWidgets.QMainWindow):
             prev_shapes = self.canvas.shapes
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
         flags = {k: False for k in self._config["flags"] or []}
+        
+        
+        
         if self.labelFile:
+            # Find max shape ID to set next_shape_id
+            max_id = -1
+            for shape_dict in self.labelFile.shapes:
+                shape_id = shape_dict.get('other_data', {}).get('id')
+                if shape_id is not None and shape_id > max_id:
+                    max_id = shape_id
+            self.next_shape_id = max_id + 1
+            
+            # Load combined shapes if present
+            self.combined_shapes = self.otherData.get('combinedShapes', [])
+            self.updateCombinedShapesList()
+            
             self._load_shape_dicts(shape_dicts=self.labelFile.shapes)
             if self.labelFile.flags is not None:
                 flags.update(self.labelFile.flags)
+        else:
+            self.next_shape_id = 0
+            self.combined_shapes = []
+            self.combinedShapesList.clear()
+        
         self.loadFlags(flags)
+
+        
         if self._config["keep_prev"] and self.noShapes():
             self.loadShapes(prev_shapes, replace=False)
             self.setDirty()
@@ -2680,8 +2755,39 @@ class MainWindow(QtWidgets.QMainWindow):
             # Calculate IoU for combined mask
             combined_iou = calculate_iou(self.canvas.ground_truth_mask, combined_mask)
             
-            # Show result in a dialog
-            self._showCombinedIoUDialog(combined_iou, len(self.canvas.selectedShapes))
+            # ← ADD: Collect shape IDs
+            shape_ids = [shape.shape_id for shape in self.canvas.selectedShapes]
+            
+            # ← ADD: Prompt for error type
+            error_type, ok = QtWidgets.QInputDialog.getItem(
+                self,
+                self.tr("Error Type"),
+                self.tr("Select error type for this combined shape:"),
+                ["over-coverage", "under-coverage", "misalignment", "other"],
+                0,
+                False
+            )
+            
+            if not ok:
+                error_type = "unknown"
+            
+            # ← ADD: Add to combined shapes list
+            combined_shape_record = {
+                'ids': sorted(shape_ids),
+                'error_type': error_type,
+                'iou': combined_iou
+            }
+            self.combined_shapes.append(combined_shape_record)
+            
+            # ← ADD: Update the combined shapes list widget
+            self.updateCombinedShapesList()
+            
+            # ← ADD: Mark as dirty to prompt save
+            self.setDirty()
+            
+            # ← MODIFIED: Pass shape_ids and error_type to dialog
+            self._showCombinedIoUDialog(combined_iou, len(self.canvas.selectedShapes), 
+                                        shape_ids, error_type)
             
         except Exception as e:
             import traceback
@@ -2692,7 +2798,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
 
-    def _showCombinedIoUDialog(self, combined_iou: float, num_shapes: int):
+    def _showCombinedIoUDialog(self, combined_iou: float, num_shapes: int, shape_ids: list, error_type: str):
         """Show dialog with combined IoU result."""
         # Create dialog
         dialog = QtWidgets.QDialog(self)
@@ -2707,6 +2813,19 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
+        
+        # Shape IDs
+        ids_str = ', '.join(map(str, sorted(shape_ids)))
+        ids_label = QtWidgets.QLabel(
+            f"{self.tr('Shape IDs')}: <b>[{ids_str}]</b>"
+        )
+        layout.addWidget(ids_label)
+        
+        # Error type
+        error_label = QtWidgets.QLabel(
+            f"{self.tr('Error Type')}: <b>{error_type}</b>"
+        )
+        layout.addWidget(error_label)
         
         # Number of shapes
         info_label = QtWidgets.QLabel(
@@ -2742,25 +2861,36 @@ class MainWindow(QtWidgets.QMainWindow):
             layout.addWidget(details_label)
             
             table = QtWidgets.QTableWidget()
-            table.setColumnCount(2)
-            table.setHorizontalHeaderLabels([self.tr("Label"), self.tr("IoU")])
+            table.setColumnCount(3)
+            table.setHorizontalHeaderLabels([self.tr("ID"), self.tr("Label"), self.tr("IoU")])
             table.setRowCount(len(self.canvas.selectedShapes))
             
             for row, shape in enumerate(self.canvas.selectedShapes):
+                # ID
+                id_item = QtWidgets.QTableWidgetItem(str(shape.shape_id))
+                id_item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row, 0, id_item)
+                
                 # Label
                 label_item = QtWidgets.QTableWidgetItem(shape.label)
-                table.setItem(row, 0, label_item)
+                table.setItem(row, 1, label_item)
                 
                 # Individual IoU
                 individual_iou = self.shapes_iou_cache.get(id(shape), 0.0)
                 iou_item = QtWidgets.QTableWidgetItem(f"{individual_iou*100:.1f}%")
                 iou_item.setTextAlignment(Qt.AlignCenter)
-                table.setItem(row, 1, iou_item)
+                table.setItem(row, 2, iou_item)
             
             table.resizeColumnsToContents()
             table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
             table.setMaximumHeight(150)
             layout.addWidget(table)
+        
+        # Note about saving
+        note_label = QtWidgets.QLabel(
+            f"<i>{self.tr('This combined shape has been added to the Combined Shapes list.')}</i>"
+        )
+        layout.addWidget(note_label)
         
         # Close button
         close_btn = QtWidgets.QPushButton(self.tr("Close"))
@@ -2769,6 +2899,37 @@ class MainWindow(QtWidgets.QMainWindow):
         
         dialog.setLayout(layout)
         dialog.exec_()
+
+    def updateCombinedShapesList(self):
+        """Update the Combined Shapes list widget with current combined shapes."""
+        self.combinedShapesList.clear()
+        
+        for combined in self.combined_shapes:
+            ids = combined.get('ids', [])
+            error_type = combined.get('error_type', 'unknown')
+            iou = combined.get('iou', 0.0)
+            
+            # Format: "IDs: [0, 1, 2] | Type: over-coverage | IoU: 85.3%"
+            ids_str = ', '.join(map(str, ids))
+            text = f"IDs: [{ids_str}] | Type: {error_type} | IoU: {iou*100:.1f}%"
+            
+            item = QtWidgets.QListWidgetItem(text)
+            
+            # Color code based on IoU
+            if iou >= 0.8:
+                item.setBackground(QtGui.QColor("#d4edda"))
+                item.setForeground(QtGui.QColor("#155724"))
+            elif iou >= 0.6:
+                item.setBackground(QtGui.QColor("#fff3cd"))
+                item.setForeground(QtGui.QColor("#856404"))
+            elif iou >= 0.4:
+                item.setBackground(QtGui.QColor("#ffe5b4"))
+                item.setForeground(QtGui.QColor("#8b4513"))
+            else:
+                item.setBackground(QtGui.QColor("#f8d7da"))
+                item.setForeground(QtGui.QColor("#721c24"))
+            
+            self.combinedShapesList.addItem(item)
 
     def resetGroundTruth(self):
         """Reset ground truth state."""

@@ -50,9 +50,11 @@ class Shape:
         group_id=None,
         description=None,
         mask=None,
+        shape_id=None,
     ):
         self.label = label
         self.group_id = group_id
+        self.shape_id = shape_id
         self.points = []
         self.point_labels = []
         self.shape_type = shape_type

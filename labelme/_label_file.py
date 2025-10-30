@@ -107,6 +107,9 @@ def _load_shape_json_obj(shape_json_obj: dict) -> ShapeDict:
 
     other_data = {k: v for k, v in shape_json_obj.items() if k not in SHAPE_KEYS}
 
+    if 'id' in shape_json_obj:
+        other_data['id'] = shape_json_obj['id']
+        
     loaded: ShapeDict = dict(
         label=label,
         points=points,

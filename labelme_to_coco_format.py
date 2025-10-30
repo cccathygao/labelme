@@ -48,7 +48,7 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         # bbox = [x_min, y_min, x_max - x_min, y_max - y_min]
         
         error_type = None if shape['error_type'] == data['problem'] else shape['error_type']
-        iou = None if shape['error_type'] == data['problem'] else shape['iou']
+        iou = 1.0 if shape['error_type'] == data['problem'] else shape['iou']
  
         annotation = {
             "id": ann_id,

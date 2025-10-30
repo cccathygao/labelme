@@ -31,7 +31,13 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         "annotations": []
     }
     
+    id_to_shapes = {}
+    
+    # single shape
     for ann_id, shape in enumerate(data['shapes']):
+        shape_id = shape['id']
+        id_to_shapes[shape_id] = shape
+        
         points = shape['points']
         
         # xs = [p[0] for p in points]
@@ -47,14 +53,44 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         annotation = {
             "id": ann_id,
             "image_id": image_id,
-            "category_id": None,
+            "class_id": None,
             "bbox": None,
             "area": None,
             "shape_type": shape['shape_type'],
             "error_type": error_type,
             "iou": iou,
-            "segmentation": points
+            "segmentation": [points] # list[list[list[float]]]
         }
+        
+        output['annotations'].append(annotation)
+    
+    ann_id = len(data['shapes'])
+     
+    # multi shapes
+    for item in data['combinedShapes']:
+        ids = item['ids']
+        error_type = item['error_type']
+        iou = item['iou']
+        
+        points = []
+        for id in ids:
+            assert(id == id_to_shapes[id]['id'])
+            current_shape_points = id_to_shapes[id]['points']
+            points.append(current_shape_points)
+        
+        annotation = {
+            "id": ann_id,
+            "image_id": image_id,
+            "class_id": None,
+            "bbox": None,
+            "area": None,
+            "shape_type": "polygon",
+            "error_type": error_type,
+            "iou": iou,
+            "segmentation": points # list[list[list[float]]]
+        }
+        
+        ann_id += 1
         
         output['annotations'].append(annotation)
     

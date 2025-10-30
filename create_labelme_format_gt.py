@@ -94,7 +94,8 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir):
         "imagePath": image_path,
         "imageData": None,
         "imageHeight": image_height,
-        "imageWidth": image_width
+        "imageWidth": image_width,
+        "problem": problem,
     }
     
     # Save to file

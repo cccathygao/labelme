@@ -47,8 +47,14 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         # y_min, y_max = min(ys), max(ys)
         # bbox = [x_min, y_min, x_max - x_min, y_max - y_min]
         
-        error_type = None if shape['error_type'] == data['problem'] else shape['error_type']
-        iou = 1.0 if shape['error_type'] == data['problem'] else shape['iou']
+        error_type = shape['error_type']
+        iou = shape['iou']
+        
+        if shape['error_type'] == data['problem']:
+            if iou == 1.0:
+                error_type = 'groundtruth'
+            else:
+                error_type = 'under-coverage'
  
         annotation = {
             "id": ann_id,
@@ -71,6 +77,9 @@ def labelme_to_coco(image_id, scene, num_class, num_instance):
         ids = item['ids']
         error_type = item['error_type']
         iou = item['iou']
+
+        if iou == 1.0:
+            error_type = 'groundtruth'
         
         points = []
         for id in ids:

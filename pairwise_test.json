@@ -86318,5 +86318,1097 @@
       }
     },
     "comment": "Image1 - Label: over-coverage, IoU: 0.2339474265518003. Image2 - Label: over-coverage, IoU: 0.17387050170738114"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_5.png",
+      "grefcoco_masks/1399_mask_6.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.48641617642711443,
+      "score_bad": 0.3858414406955082,
+      "score_difference": 0.10057473573160625,
+      "error_type": "under-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: under-coverage, IoU: 0.3858414406955082. Image2 - Label: under-coverage, IoU: 0.48641617642711443"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_5.png",
+      "grefcoco_masks/1399_mask_7.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.6346579997045354,
+      "score_bad": 0.3858414406955082,
+      "score_difference": 0.24881655900902722,
+      "error_type": "under-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: under-coverage, IoU: 0.3858414406955082. Image2 - Label: under-coverage, IoU: 0.6346579997045354"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_6.png",
+      "grefcoco_masks/1399_mask_7.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.6346579997045354,
+      "score_bad": 0.48641617642711443,
+      "score_difference": 0.14824182327742097,
+      "error_type": "under-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: under-coverage, IoU: 0.48641617642711443. Image2 - Label: under-coverage, IoU: 0.6346579997045354"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_9.png",
+      "grefcoco_masks/1399_mask_11.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 0.0,
+      "score_difference": 0.0003068511492970319,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.0003068511492970319"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_9.png",
+      "grefcoco_masks/1399_mask_13.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00022363860002236387,
+      "score_bad": 0.0,
+      "score_difference": 0.00022363860002236387,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00022363860002236387"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_9.png",
+      "grefcoco_masks/1399_mask_14.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 2.67079750013354e-05,
+      "score_bad": 0.0,
+      "score_difference": 2.67079750013354e-05,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 2.67079750013354e-05"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_9.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00011724429020306711,
+      "score_bad": 0.0,
+      "score_difference": 0.00011724429020306711,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_10.png",
+      "grefcoco_masks/1399_mask_11.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 0.0,
+      "score_difference": 0.0003068511492970319,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.0003068511492970319"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_10.png",
+      "grefcoco_masks/1399_mask_13.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00022363860002236387,
+      "score_bad": 0.0,
+      "score_difference": 0.00022363860002236387,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00022363860002236387"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_10.png",
+      "grefcoco_masks/1399_mask_14.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 2.67079750013354e-05,
+      "score_bad": 0.0,
+      "score_difference": 2.67079750013354e-05,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 2.67079750013354e-05"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_10.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00011724429020306711,
+      "score_bad": 0.0,
+      "score_difference": 0.00011724429020306711,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_11.png",
+      "grefcoco_masks/1399_mask_12.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 0.0,
+      "score_difference": 0.0003068511492970319,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0003068511492970319. Image2 - Label: background, IoU: 0.0"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_11.png",
+      "grefcoco_masks/1399_mask_13.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 0.00022363860002236387,
+      "score_difference": 8.321254927466803e-05,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0003068511492970319. Image2 - Label: background, IoU: 0.00022363860002236387"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_11.png",
+      "grefcoco_masks/1399_mask_14.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 2.67079750013354e-05,
+      "score_difference": 0.0002801431742956965,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0003068511492970319. Image2 - Label: background, IoU: 2.67079750013354e-05"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_11.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.0003068511492970319,
+      "score_bad": 0.00011724429020306711,
+      "score_difference": 0.0001896068590939648,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0003068511492970319. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_12.png",
+      "grefcoco_masks/1399_mask_13.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00022363860002236387,
+      "score_bad": 0.0,
+      "score_difference": 0.00022363860002236387,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00022363860002236387"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_12.png",
+      "grefcoco_masks/1399_mask_14.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 2.67079750013354e-05,
+      "score_bad": 0.0,
+      "score_difference": 2.67079750013354e-05,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 2.67079750013354e-05"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_12.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00011724429020306711,
+      "score_bad": 0.0,
+      "score_difference": 0.00011724429020306711,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.0. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_13.png",
+      "grefcoco_masks/1399_mask_14.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00022363860002236387,
+      "score_bad": 2.67079750013354e-05,
+      "score_difference": 0.00019693062502102848,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.00022363860002236387. Image2 - Label: background, IoU: 2.67079750013354e-05"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_13.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00022363860002236387,
+      "score_bad": 0.00011724429020306711,
+      "score_difference": 0.00010639430981929676,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 0.00022363860002236387. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_14.png",
+      "grefcoco_masks/1399_mask_15.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.00011724429020306711,
+      "score_bad": 2.67079750013354e-05,
+      "score_difference": 9.053631520173171e-05,
+      "error_type": "background",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: background, IoU: 2.67079750013354e-05. Image2 - Label: background, IoU: 0.00011724429020306711"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_18.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.40091761609503374,
+      "score_bad": 0.32036112505802444,
+      "score_difference": 0.08055649103700929,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.40091761609503374"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_19.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.32036112505802444,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.10371186276871885,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.2166492622893056"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_20.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.5159592322480242,
+      "score_bad": 0.32036112505802444,
+      "score_difference": 0.19559810718999976,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.5159592322480242"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_21.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.7308465345464762,
+      "score_bad": 0.32036112505802444,
+      "score_difference": 0.41048540948845175,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.7308465345464762"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_22.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.32036112505802444,
+      "score_difference": 0.6229829945581327,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.9433441196161572"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_17.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.8562566465792272,
+      "score_bad": 0.32036112505802444,
+      "score_difference": 0.5358955215212027,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.32036112505802444. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_18.png",
+      "grefcoco_masks/1399_mask_19.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.40091761609503374,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.18426835380572815,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.40091761609503374. Image2 - Label: over-coverage, IoU: 0.2166492622893056"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_18.png",
+      "grefcoco_masks/1399_mask_20.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.5159592322480242,
+      "score_bad": 0.40091761609503374,
+      "score_difference": 0.11504161615299047,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.40091761609503374. Image2 - Label: over-coverage, IoU: 0.5159592322480242"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_18.png",
+      "grefcoco_masks/1399_mask_21.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.7308465345464762,
+      "score_bad": 0.40091761609503374,
+      "score_difference": 0.32992891845144245,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.40091761609503374. Image2 - Label: over-coverage, IoU: 0.7308465345464762"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_18.png",
+      "grefcoco_masks/1399_mask_22.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.40091761609503374,
+      "score_difference": 0.5424265035211234,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.40091761609503374. Image2 - Label: over-coverage, IoU: 0.9433441196161572"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_18.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.8562566465792272,
+      "score_bad": 0.40091761609503374,
+      "score_difference": 0.45533903048419344,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.40091761609503374. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_19.png",
+      "grefcoco_masks/1399_mask_20.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.5159592322480242,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.2993099699587186,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.2166492622893056. Image2 - Label: over-coverage, IoU: 0.5159592322480242"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_19.png",
+      "grefcoco_masks/1399_mask_21.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.7308465345464762,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.5141972722571706,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.2166492622893056. Image2 - Label: over-coverage, IoU: 0.7308465345464762"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_19.png",
+      "grefcoco_masks/1399_mask_22.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.7266948573268516,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.2166492622893056. Image2 - Label: over-coverage, IoU: 0.9433441196161572"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_19.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.8562566465792272,
+      "score_bad": 0.2166492622893056,
+      "score_difference": 0.6396073842899216,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.2166492622893056. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_20.png",
+      "grefcoco_masks/1399_mask_21.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.7308465345464762,
+      "score_bad": 0.5159592322480242,
+      "score_difference": 0.214887302298452,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.5159592322480242. Image2 - Label: over-coverage, IoU: 0.7308465345464762"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_20.png",
+      "grefcoco_masks/1399_mask_22.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.5159592322480242,
+      "score_difference": 0.42738488736813296,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.5159592322480242. Image2 - Label: over-coverage, IoU: 0.9433441196161572"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_20.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.8562566465792272,
+      "score_bad": 0.5159592322480242,
+      "score_difference": 0.340297414331203,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.5159592322480242. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_21.png",
+      "grefcoco_masks/1399_mask_22.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.7308465345464762,
+      "score_difference": 0.21249758506968097,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.7308465345464762. Image2 - Label: over-coverage, IoU: 0.9433441196161572"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_21.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "B",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.8562566465792272,
+      "score_bad": 0.7308465345464762,
+      "score_difference": 0.125410112032751,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.7308465345464762. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
+  },
+  {
+    "image_id": 1399,
+    "prompt": "You are an expert vision-language evaluator. Your task is to perform a pairwise comparison to determine which segmentation mask best matches the given referring expression.The segmenation mask is highlighted in red color in each image. The criteria for judging are: 1. **Completeness:** Does the mask cover the *entire* object/region described by the referring expression? 2. **Accuracy:** Does the mask strictly adhere to the boundaries of the described object/region? (Minimize false positives, i.e., covering background or other objects.) 3. **Ambiguity Resolution:** If the expression is ambiguous (e.g., \"the largest red ball\"), does the mask correctly select the intended instance based on visual context? 4. **Linguistic Alignment:** Does the mask correctly interpret all descriptive elements (color, size, position, action, relation to other objects) in the expression? Given the referring expression: girrafe in background hiding face, which generated image is better?\nA. <image>\nB. <image>\nPlease answer with A or B directly.",
+    "media": [
+      "grefcoco_masks/1399_mask_22.png",
+      "grefcoco_masks/1399_mask_23.png"
+    ],
+    "choices": [
+      "A",
+      "B"
+    ],
+    "answer": "A",
+    "metadata": {
+      "task": "referring-segmentation",
+      "referring expression": "girrafe in background hiding face",
+      "score_good": 0.9433441196161572,
+      "score_bad": 0.8562566465792272,
+      "score_difference": 0.08708747303692999,
+      "error_type": "over-coverage",
+      "problem_type": {
+        "num_class": "1",
+        "num_instance": "1"
+      }
+    },
+    "comment": "Image1 - Label: over-coverage, IoU: 0.9433441196161572. Image2 - Label: over-coverage, IoU: 0.8562566465792272"
   }
 ]

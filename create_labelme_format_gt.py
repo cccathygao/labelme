@@ -17,7 +17,7 @@ from PIL import Image
 from labelme._label_file import LabelFile
 from labelme import __version__
 
-def parse_segmentation_string(seg_string: str) -> List[List[List[float]]]:
+def parse_segmentation_string(seg_string: str):
     """
     Parse a segmentation string and extract coordinate lists for each <seg> tag.
     
@@ -120,7 +120,8 @@ def main():
     args = parser.parse_args()
     
     # Hardcoded paths
-    IMAGE_DIR = 'output/'
+    IMAGE_DIR = 'temp/'
+    os.makedirs(IMAGE_DIR, exist_ok=True)
     DATASET_JSON = 'grefcoco_dataset/dataset.json'
     
     # Convert

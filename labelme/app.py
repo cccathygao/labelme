@@ -1711,7 +1711,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions.undoLastPoint.setEnabled(False)
             self.actions.undo.setEnabled(True)
             self.setDirty()
-            if self.canvas.ground_truth_mask is not None:
+            if self.canvas.ground_truth_masks_by_label:
                 iou = self.canvas.calculate_shape_iou(shape)
                 self.shapes_iou_cache[id(shape)] = iou
                 item = self.labelList.findItemByShape(shape)
@@ -1964,7 +1964,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.loadGroundTruth(gt_filename)
             print('groundtruth loaded:', gt_filename)
         # After loading shapes, recalculate IoU if ground truth exists
-        if self.canvas.ground_truth_mask is not None:
+        if self.canvas.ground_truth_masks_by_label:
             self.calculateExistingShapesIoU()
 
         return True
@@ -2472,12 +2472,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
             
             img_shape = (self.image.height(), self.image.width())
-            combined_mask = np.zeros(img_shape, dtype=bool)
             
-            # Combine all ground truth polygons into one mask
+            # CHANGED: Create dictionary of masks per label instead of single combined mask
+            self.ground_truth_masks_by_label = {}
+            
+            # Group shapes by label
             for shape_dict in self.ground_truth_shapes:
+                label = shape_dict["label"]
                 points = shape_dict["points"]
                 shape_type = shape_dict.get("shape_type", "polygon")
+                
+                # Initialize mask for this label if not exists
+                if label not in self.ground_truth_masks_by_label:
+                    self.ground_truth_masks_by_label[label] = np.zeros(img_shape, dtype=bool)
                 
                 if shape_type == "mask" and shape_dict.get("mask") is not None:
                     # Handle mask type
@@ -2492,27 +2499,32 @@ class MainWindow(QtWidgets.QMainWindow):
                     
                     if x2 > x1 and y2 > y1:
                         mask_h, mask_w = mask.shape
-                        combined_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = np.logical_or(
-                            combined_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)],
+                        self.ground_truth_masks_by_label[label][y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = np.logical_or(
+                            self.ground_truth_masks_by_label[label][y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)],
                             mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
                         )
                 else:
                     # Handle polygon/rectangle/circle types
                     mask = utils.shape_to_mask(img_shape, points, shape_type)
-                    combined_mask = np.logical_or(combined_mask, mask)
+                    self.ground_truth_masks_by_label[label] = np.logical_or(
+                        self.ground_truth_masks_by_label[label], mask
+                    )
             
-            # Set ground truth in canvas
-            self.canvas.set_ground_truth_mask(combined_mask)
-
+            # CHANGED: Set ground truth masks by label in canvas
+            self.canvas.set_ground_truth_masks_by_label(self.ground_truth_masks_by_label)
+            
             # Calculate IoU for all existing shapes
             self.calculateExistingShapesIoU()
             
             # Show status message
+            labels_info = ', '.join([f"{label} ({mask.sum()} pixels)" 
+                                    for label, mask in self.ground_truth_masks_by_label.items()])
             self.show_status_message(
-                self.tr("Ground truth loaded: %s") % osp.basename(filename)
+                self.tr("Ground truth loaded: %s | Labels: %s") % (osp.basename(filename), labels_info)
             )
             
             logger.info(f"Ground truth loaded from: {filename}")
+            logger.info(f"Labels found: {list(self.ground_truth_masks_by_label.keys())}")
             
         except Exception as e:
             import traceback
@@ -2525,7 +2537,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def calculateExistingShapesIoU(self):
         """Calculate IoU for all existing shapes against ground truth."""
-        if self.canvas.ground_truth_mask is None:
+        if self.canvas.ground_truth_masks_by_label is None:
             return
         
         self.shapes_iou_cache.clear()
@@ -2545,7 +2557,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def showAllShapesIoU(self):
         """Display IoU values for all existing shapes in a dialog."""
-        if not self.shapes_iou_cache and self.canvas.ground_truth_mask is not None:
+        if not self.shapes_iou_cache and self.canvas.ground_truth_masks_by_label:
             self.calculateExistingShapesIoU()
         
         if not self.shapes_iou_cache:
@@ -2670,7 +2682,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def updateShapeIoUCache(self):
         """Update IoU cache for shapes that were just moved."""
-        if self.canvas.ground_truth_mask is None:
+        if self.canvas.ground_truth_masks_by_label is None:
             return
         
         shapes_to_update = []
@@ -2691,8 +2703,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._update_label_text_with_iou(item, shape, text)
 
     def calculateCombinedShapesIoU(self):
-        """Calculate IoU for multiple selected shapes combined."""
-        if self.canvas.ground_truth_mask is None:
+        """Calculate IoU for multiple selected shapes combined (per label)."""
+        if not self.canvas.ground_truth_masks_by_label:
             QtWidgets.QMessageBox.warning(
                 self,
                 self.tr("No Ground Truth"),
@@ -2712,82 +2724,70 @@ class MainWindow(QtWidgets.QMainWindow):
             from labelme.utils import shape_to_mask, calculate_iou
             
             # Get image shape
-            img_shape = self.canvas.ground_truth_mask.shape
+            img_shape = next(iter(self.canvas.ground_truth_masks_by_label.values())).shape
             
-            # Create combined mask
-            combined_mask = np.zeros(img_shape, dtype=bool)
-            
+            # CHANGED: Group selected shapes by label
+            shapes_by_label = {}
             for shape in self.canvas.selectedShapes:
-                # Get points from shape
-                points = [[p.x(), p.y()] for p in shape.points]
+                if shape.label not in shapes_by_label:
+                    shapes_by_label[shape.label] = []
+                shapes_by_label[shape.label].append(shape)
+            
+            # Calculate IoU for each label group
+            results = {}
+            for label, shapes in shapes_by_label.items():
+                if label not in self.canvas.ground_truth_masks_by_label:
+                    logger.warning(f"Label '{label}' not found in ground truth")
+                    continue
                 
-                # Handle mask type shapes
-                if shape.shape_type == 'mask' and shape.mask is not None:
-                    shape_mask = np.zeros(img_shape, dtype=bool)
-                    
-                    if len(points) >= 2:
-                        (x1, y1), (x2, y2) = points[0], points[1]
-                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                        
-                        # Ensure coordinates are within bounds
-                        x1 = max(0, min(x1, img_shape[1] - 1))
-                        y1 = max(0, min(y1, img_shape[0] - 1))
-                        x2 = max(0, min(x2, img_shape[1]))
-                        y2 = max(0, min(y2, img_shape[0]))
-                        
-                        if x2 > x1 and y2 > y1:
-                            mask_h, mask_w = shape.mask.shape
-                            shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
-                else:
-                    # Handle regular shapes (polygon, rectangle, circle, etc.)
-                    if len(points) < 2:
-                        continue
-                    
-                    shape_mask = shape_to_mask(
-                        img_shape=img_shape,
-                        points=points,
-                        shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
-                    )
+                # Create combined mask for this label
+                combined_mask = np.zeros(img_shape, dtype=bool)
                 
-                # Combine masks using logical OR
-                combined_mask = np.logical_or(combined_mask, shape_mask)
+                for shape in shapes:
+                    # Get points from shape
+                    points = [[p.x(), p.y()] for p in shape.points]
+                    
+                    # Handle mask type shapes
+                    if shape.shape_type == 'mask' and shape.mask is not None:
+                        shape_mask = np.zeros(img_shape, dtype=bool)
+                        
+                        if len(points) >= 2:
+                            (x1, y1), (x2, y2) = points[0], points[1]
+                            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                            
+                            # Ensure coordinates are within bounds
+                            x1 = max(0, min(x1, img_shape[1] - 1))
+                            y1 = max(0, min(y1, img_shape[0] - 1))
+                            x2 = max(0, min(x2, img_shape[1]))
+                            y2 = max(0, min(y2, img_shape[0]))
+                            
+                            if x2 > x1 and y2 > y1:
+                                mask_h, mask_w = shape.mask.shape
+                                shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                    else:
+                        # Handle regular shapes
+                        if len(points) < 2:
+                            continue
+                        
+                        shape_mask = shape_to_mask(
+                            img_shape=img_shape,
+                            points=points,
+                            shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                        )
+                    
+                    # Combine masks using logical OR
+                    combined_mask = np.logical_or(combined_mask, shape_mask)
+                
+                # Calculate IoU for this label
+                label_iou = calculate_iou(self.canvas.ground_truth_masks_by_label[label], combined_mask)
+                results[label] = {
+                    'iou': label_iou,
+                    'num_shapes': len(shapes),
+                    'shape_ids': [s.shape_id for s in shapes]
+                }
             
-            # Calculate IoU for combined mask
-            combined_iou = calculate_iou(self.canvas.ground_truth_mask, combined_mask)
-            
-            # ← ADD: Collect shape IDs
-            shape_ids = [shape.shape_id for shape in self.canvas.selectedShapes]
-            
-            # ← ADD: Prompt for error type
-            error_type, ok = QtWidgets.QInputDialog.getItem(
-                self,
-                self.tr("Error Type"),
-                self.tr("Select error type for this combined shape:"),
-                ["over-coverage", "under-coverage", "misalignment", "other"],
-                0,
-                False
-            )
-            
-            if not ok:
-                error_type = "unknown"
-            
-            # ← ADD: Add to combined shapes list
-            combined_shape_record = {
-                'ids': sorted(shape_ids),
-                'error_type': error_type,
-                'iou': combined_iou
-            }
-            self.combined_shapes.append(combined_shape_record)
-            
-            # ← ADD: Update the combined shapes list widget
-            self.updateCombinedShapesList()
-            
-            # ← ADD: Mark as dirty to prompt save
-            self.setDirty()
-            
-            # ← MODIFIED: Pass shape_ids and error_type to dialog
-            self._showCombinedIoUDialog(combined_iou, len(self.canvas.selectedShapes), 
-                                        shape_ids, error_type)
+            # Show results dialog
+            self._showCombinedIoUDialogByLabel(results)
             
         except Exception as e:
             import traceback
@@ -2797,6 +2797,64 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr("<b>%s</b>") % str(e)
             )
 
+    def _showCombinedIoUDialogByLabel(self, results: dict):
+        """Show dialog with combined IoU results organized by label."""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("Combined IoU by Label"))
+        dialog.setMinimumWidth(500)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Title
+        title_label = QtWidgets.QLabel(
+            f"<h3>{self.tr('Combined IoU for Selected Shapes (by Label)')}</h3>"
+        )
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Create table for results
+        for label, data in results.items():
+            group_box = QtWidgets.QGroupBox(f"Label: {label}")
+            group_layout = QtWidgets.QVBoxLayout()
+            
+            # Shape IDs
+            ids_str = ', '.join(map(str, sorted(data['shape_ids'])))
+            ids_label = QtWidgets.QLabel(f"{self.tr('Shape IDs')}: <b>[{ids_str}]</b>")
+            group_layout.addWidget(ids_label)
+            
+            # Number of shapes
+            num_label = QtWidgets.QLabel(f"{self.tr('Number of shapes')}: <b>{data['num_shapes']}</b>")
+            group_layout.addWidget(num_label)
+            
+            # IoU with color coding
+            iou_percent = data['iou'] * 100
+            if iou_percent >= 80:
+                bg_color, text_color = "#d4edda", "#155724"
+            elif iou_percent >= 60:
+                bg_color, text_color = "#fff3cd", "#856404"
+            elif iou_percent >= 40:
+                bg_color, text_color = "#ffe5b4", "#8b4513"
+            else:
+                bg_color, text_color = "#f8d7da", "#721c24"
+            
+            iou_label = QtWidgets.QLabel(f"<h2>{iou_percent:.2f}%</h2>")
+            iou_label.setAlignment(Qt.AlignCenter)
+            iou_label.setStyleSheet(
+                f"background-color: {bg_color}; color: {text_color}; "
+                f"padding: 15px; border-radius: 5px; font-weight: bold;"
+            )
+            group_layout.addWidget(iou_label)
+            
+            group_box.setLayout(group_layout)
+            layout.addWidget(group_box)
+        
+        # Close button
+        close_btn = QtWidgets.QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     def _showCombinedIoUDialog(self, combined_iou: float, num_shapes: int, shape_ids: list, error_type: str):
         """Show dialog with combined IoU result."""
@@ -2936,7 +2994,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ground_truth_file = None
         self.ground_truth_shapes = []
         self.shapes_iou_cache.clear()
-        self.canvas.ground_truth_mask = None
+        self.canvas.ground_truth_masks_by_label = {}  # CHANGED from ground_truth_mask
         self.canvas._last_iou = 0.0
         self.iou_widget.setVisible(True)
         self.iou_value_label.setText("--")

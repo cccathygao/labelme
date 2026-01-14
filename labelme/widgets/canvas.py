@@ -118,7 +118,7 @@ class Canvas(QtWidgets.QWidget):
         self.hShapeIsSelected = False
         self._painter = QtGui.QPainter()
         self._cursor = CURSOR_DEFAULT
-        self.ground_truth_mask = None
+        self.ground_truth_masks_by_label = {}
         self.image_shape = None
         self._last_iou = 0.0
 
@@ -455,7 +455,7 @@ class Canvas(QtWidgets.QWidget):
             self.restoreCursor()
             self.unHighlight()
         self.vertexSelected.emit(self.hVertex is not None)
-        if self.drawing() and self.current and self.ground_truth_mask is not None:
+        if self.drawing() and self.current and self.ground_truth_masks_by_label:
             print(f'cathy debug: mouseMoveEvent, called calculate IoU')
             self.calculate_and_emit_iou()
         self._update_status(extra_messages=status_messages)
@@ -495,7 +495,7 @@ class Canvas(QtWidgets.QWidget):
                     # Add point to existing shape.
                     if self.createMode == "polygon":
                         self.current.addPoint(self.line[1])
-                        if self.ground_truth_mask is not None:
+                        if self.ground_truth_masks_by_label is not None:
                             self.calculate_and_emit_iou()
                         self.line[0] = self.current[-1]
                         if self.current.isClosed():
@@ -880,7 +880,7 @@ class Canvas(QtWidgets.QWidget):
         self.current = None
         self.setHiding(False)
         self.newShape.emit()
-        if self.ground_truth_mask is not None:
+        if self.ground_truth_masks_by_label is not None:
             self._last_iou = 0.0
             self.iouUpdated.emit(0.0)
         self.update()
@@ -1046,7 +1046,7 @@ class Canvas(QtWidgets.QWidget):
         else:
             self.current = None
             self.drawingPolygon.emit(False)
-        if self.ground_truth_mask is not None:
+        if self.ground_truth_masks_by_label is not None:
             self.calculate_and_emit_iou()
         self.update()
 
@@ -1089,11 +1089,15 @@ class Canvas(QtWidgets.QWidget):
         self.shapesBackups = []
         self.update()
         
-    def set_ground_truth_mask(self, mask: np.ndarray) -> None:
-        """Set the ground truth mask for IoU calculation."""
-        self.ground_truth_mask = mask
-        self.image_shape = mask.shape[:2]
-        logger.info(f"Ground truth mask set with shape: {mask.shape}")
+    def set_ground_truth_masks_by_label(self, masks_by_label: dict[str, np.ndarray]) -> None:
+        """Set the ground truth masks organized by label for IoU calculation."""
+        self.ground_truth_masks_by_label = masks_by_label
+        if masks_by_label:
+            # Get image shape from any mask
+            first_mask = next(iter(masks_by_label.values()))
+            self.image_shape = first_mask.shape[:2]
+            logger.info(f"Ground truth masks set for labels: {list(masks_by_label.keys())}")
+            logger.info(f"Image shape: {self.image_shape}")
 
     def _get_current_preview_points(self) -> list:
         """
@@ -1113,11 +1117,11 @@ class Canvas(QtWidgets.QWidget):
 
     def calculate_and_emit_iou(self) -> None:
         """
-        Calculate IoU between current drawing and ground truth, then emit signal.
+        Calculate IoU between current drawing and ground truth for the same label, then emit signal.
         This should be called from mouseMoveEvent, mousePressEvent, and undoLastPoint.
         """
-        if self.ground_truth_mask is None:
-            print(f'cathy debug: no groundtruth mask')
+        if not self.ground_truth_masks_by_label:
+            print(f'cathy debug: no groundtruth masks')
             return
         
         if not self.drawing():
@@ -1128,25 +1132,39 @@ class Canvas(QtWidgets.QWidget):
             print(f'cathy debug: not polygon')
             return
         
-        iou = self._calculate_current_iou()
-        print(f'cathy debug: IoU calculated: {iou}')
+        # CHANGED: Get current label from the shape being drawn
+        if not self.current:
+            return
+        
+        # Get label - if not set yet, can't calculate IoU
+        current_label = getattr(self.current, 'label', None)
+        if not current_label:
+            print(f'cathy debug: no label set for current shape yet')
+            return
+        
+        iou = self._calculate_current_iou(current_label)
+        print(f'cathy debug: IoU calculated for label "{current_label}": {iou}')
         
         # Only emit if IoU changed (avoid unnecessary updates)
         if abs(iou - self._last_iou) > 0.001:
             print(f'cathy debug: last IoU: {self._last_iou}')
             self._last_iou = iou
-            print(f'cathy debug: last IoU: {self._last_iou}')
-
+            print(f'cathy debug: new last IoU: {self._last_iou}')
             self.iouUpdated.emit(iou)
         else:
             print(f'cathy debug: IoU not changed')
 
-    def _calculate_current_iou(self) -> float:
+    def _calculate_current_iou(self, label: str) -> float:
         """
-        Calculate IoU between current drawing preview and ground truth.
-        Returns 0.0 if no valid polygon can be formed.
+        Calculate IoU between current drawing preview and ground truth for the specified label.
+        Returns 0.0 if no valid polygon can be formed or label not in ground truth.
         """
-        if self.ground_truth_mask is None or not self.current:
+        if not self.ground_truth_masks_by_label or not self.current:
+            return 0.0
+        
+        # CHANGED: Check if this label exists in ground truth
+        if label not in self.ground_truth_masks_by_label:
+            print(f'cathy debug: label "{label}" not found in ground truth labels: {list(self.ground_truth_masks_by_label.keys())}')
             return 0.0
         
         try:
@@ -1176,22 +1194,22 @@ class Canvas(QtWidgets.QWidget):
             
             # Create mask from current preview points
             current_mask = shape_to_mask(
-                img_shape=self.ground_truth_mask.shape,
+                img_shape=self.ground_truth_masks_by_label[label].shape,
                 points=points,
                 shape_type=shape_type
             )
             
-            # Calculate IoU
-            iou = calculate_iou(self.ground_truth_mask, current_mask)
+            # CHANGED: Calculate IoU against ground truth for this specific label only
+            iou = calculate_iou(self.ground_truth_masks_by_label[label], current_mask)
             return iou
             
         except Exception as e:
-            logger.debug(f"Error calculating IoU: {e}")
+            logger.debug(f"Error calculating IoU for label '{label}': {e}")
             return 0.0
 
     def calculate_shape_iou(self, shape: Shape) -> float:
         """
-        Calculate IoU for an existing shape against ground truth.
+        Calculate IoU for an existing shape against ground truth for its label.
         Used for shapes loaded from JSON files.
         
         Args:
@@ -1200,7 +1218,12 @@ class Canvas(QtWidgets.QWidget):
         Returns:
             IoU value between 0 and 1, or 0.0 if calculation fails
         """
-        if self.ground_truth_mask is None:
+        if not self.ground_truth_masks_by_label:
+            return 0.0
+        
+        # CHANGED: Check if shape's label exists in ground truth
+        if shape.label not in self.ground_truth_masks_by_label:
+            logger.debug(f"Label '{shape.label}' not found in ground truth labels: {list(self.ground_truth_masks_by_label.keys())}")
             return 0.0
         
         try:
@@ -1212,7 +1235,7 @@ class Canvas(QtWidgets.QWidget):
             # Handle mask type shapes
             if shape.shape_type == 'mask' and shape.mask is not None:
                 # For mask type, we need to place it in the correct location
-                img_shape = self.ground_truth_mask.shape
+                img_shape = self.ground_truth_masks_by_label[shape.label].shape
                 shape_mask = np.zeros(img_shape, dtype=bool)
                 
                 if len(points) >= 2:
@@ -1228,7 +1251,7 @@ class Canvas(QtWidgets.QWidget):
                     if x2 > x1 and y2 > y1:
                         shape_mask[y1:y2, x1:x2] = shape.mask[:y2-y1, :x2-x1]
                 
-                iou = calculate_iou(self.ground_truth_mask, shape_mask)
+                iou = calculate_iou(self.ground_truth_masks_by_label[shape.label], shape_mask)
                 return iou
             
             # Handle regular shapes (polygon, rectangle, circle, etc.)
@@ -1236,16 +1259,17 @@ class Canvas(QtWidgets.QWidget):
                 return 0.0
             
             shape_mask = shape_to_mask(
-                img_shape=self.ground_truth_mask.shape,
+                img_shape=self.ground_truth_masks_by_label[shape.label].shape,
                 points=points,
                 shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
             )
             
-            iou = calculate_iou(self.ground_truth_mask, shape_mask)
+            # CHANGED: Calculate IoU against ground truth for this specific label
+            iou = calculate_iou(self.ground_truth_masks_by_label[shape.label], shape_mask)
             return iou
             
         except Exception as e:
-            logger.error(f"Error calculating shape IoU: {e}")
+            logger.error(f"Error calculating shape IoU for label '{shape.label}': {e}")
             return 0.0
 
 

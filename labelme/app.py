@@ -148,6 +148,18 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # Combined Shapes List Widget
         self.combinedShapesList = QtWidgets.QListWidget()
+        self.combinedShapesList.setWordWrap(True)
+        self.combinedShapesList.setTextElideMode(Qt.ElideNone)
+        self.combinedShapesList.setResizeMode(QtWidgets.QListView.Adjust)  # Add this
+        self.combinedShapesList.setSpacing(2)  # Add spacing between items
+        # Enable rich text rendering
+        from labelme.widgets.label_list_widget import HTMLDelegate
+        self.combinedShapesList.setItemDelegate(HTMLDelegate())
+
+        # Set context menu
+        self.combinedShapesList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.combinedShapesList.customContextMenuRequested.connect(self.popCombinedShapesMenu)
+
         self.combinedShapesList.setToolTip(
             self.tr("Combined shapes with their IoU values")
         )
@@ -2871,7 +2883,20 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr("Please select at least one shape to calculate combined IoU.")
             )
             return
+
+        error_type, ok = QtWidgets.QInputDialog.getItem(
+            self,
+            self.tr("Error Type"),
+            self.tr("Select error type for this combined shape:"),
+            ["over-coverage", "under-coverage", "misalignment", "fragmentation", "other"],
+            0,
+            False
+        )
         
+        if not ok:
+            # User cancelled
+            return
+    
         try:
             from labelme.utils import shape_to_mask, calculate_iou
             
@@ -2887,6 +2912,8 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Calculate IoU for each label group
             results = {}
+            all_shape_ids = []
+
             for label, shapes in shapes_by_label.items():
                 if label not in self.canvas.ground_truth_masks_by_label:
                     logger.warning(f"Label '{label}' not found in ground truth")
@@ -2896,6 +2923,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 combined_mask = np.zeros(img_shape, dtype=bool)
                 
                 for shape in shapes:
+                    all_shape_ids.append(shape.shape_id)
+
                     # Get points from shape
                     points = [[p.x(), p.y()] for p in shape.points]
                     
@@ -2938,9 +2967,26 @@ class MainWindow(QtWidgets.QMainWindow):
                     'shape_ids': [s.shape_id for s in shapes]
                 }
             
-            # Show results dialog
-            self._showCombinedIoUDialogByLabel(results)
+            # Calculate mean IoU across all labels
+            mean_iou = sum(r['iou'] for r in results.values()) / len(results) if results else 0.0
+
+            combined_shape_record = {
+                'ids': sorted(all_shape_ids),
+                'error_type': error_type,
+                'results_by_label': results,  # Store per-label results
+                'mean_iou': mean_iou  # Store mean IoU
+            }
+            self.combined_shapes.append(combined_shape_record)
             
+            # CHANGED: Update the combined shapes list widget
+            self.updateCombinedShapesList()
+
+            # Mark as dirty to prompt save
+            self.setDirty()
+
+            # Show results dialog
+            self._showCombinedIoUDialogByLabel(results, error_type, all_shape_ids, mean_iou)
+        
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -2949,7 +2995,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr("<b>%s</b>") % str(e)
             )
 
-    def _showCombinedIoUDialogByLabel(self, results: dict):
+    def _showCombinedIoUDialogByLabel(self, results: dict, error_type: str, shape_ids: list, mean_iou: float):
         """Show dialog with combined IoU results organized by label."""
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle(self.tr("Combined IoU by Label"))
@@ -2964,21 +3010,34 @@ class MainWindow(QtWidgets.QMainWindow):
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
         
-        # Create table for results
+        # Error Type
+        error_label = QtWidgets.QLabel(
+            f"<b>{self.tr('Error Type')}:</b> {error_type}"
+        )
+        layout.addWidget(error_label)
+        
+        # All Shape IDs
+        ids_str = ', '.join(map(str, sorted(shape_ids)))
+        all_ids_label = QtWidgets.QLabel(
+            f"<b>{self.tr('All Shape IDs')}:</b> [{ids_str}]"
+        )
+        layout.addWidget(all_ids_label)
+        
+        # Per-label results
         for label, data in results.items():
             group_box = QtWidgets.QGroupBox(f"Label: {label}")
             group_layout = QtWidgets.QVBoxLayout()
             
-            # Shape IDs
-            ids_str = ', '.join(map(str, sorted(data['shape_ids'])))
-            ids_label = QtWidgets.QLabel(f"{self.tr('Shape IDs')}: <b>[{ids_str}]</b>")
+            # Shape IDs for this label
+            label_ids_str = ', '.join(map(str, sorted(data['shape_ids'])))
+            ids_label = QtWidgets.QLabel(f"{self.tr('Shape IDs')}: <b>[{label_ids_str}]</b>")
             group_layout.addWidget(ids_label)
             
             # Number of shapes
             num_label = QtWidgets.QLabel(f"{self.tr('Number of shapes')}: <b>{data['num_shapes']}</b>")
             group_layout.addWidget(num_label)
             
-            # IoU with color coding
+            # Class IoU with color coding
             iou_percent = data['iou'] * 100
             if iou_percent >= 80:
                 bg_color, text_color = "#d4edda", "#155724"
@@ -2999,6 +3058,30 @@ class MainWindow(QtWidgets.QMainWindow):
             
             group_box.setLayout(group_layout)
             layout.addWidget(group_box)
+        
+        # Mean IoU across all labels
+        layout.addSpacing(10)
+        mean_label = QtWidgets.QLabel(f"<h3>{self.tr('Mean IoU across all labels')}</h3>")
+        mean_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(mean_label)
+        
+        mean_percent = mean_iou * 100
+        if mean_percent >= 80:
+            bg_color, text_color = "#d4edda", "#155724"
+        elif mean_percent >= 60:
+            bg_color, text_color = "#fff3cd", "#856404"
+        elif mean_percent >= 40:
+            bg_color, text_color = "#ffe5b4", "#8b4513"
+        else:
+            bg_color, text_color = "#f8d7da", "#721c24"
+        
+        mean_iou_label = QtWidgets.QLabel(f"<h2>{mean_percent:.2f}%</h2>")
+        mean_iou_label.setAlignment(Qt.AlignCenter)
+        mean_iou_label.setStyleSheet(
+            f"background-color: {bg_color}; color: {text_color}; "
+            f"padding: 15px; border-radius: 5px; font-weight: bold;"
+        )
+        layout.addWidget(mean_iou_label)
         
         # Close button
         close_btn = QtWidgets.QPushButton(self.tr("Close"))
@@ -3114,25 +3197,41 @@ class MainWindow(QtWidgets.QMainWindow):
         """Update the Combined Shapes list widget with current combined shapes."""
         self.combinedShapesList.clear()
         
-        for combined in self.combined_shapes:
+        for idx, combined in enumerate(self.combined_shapes):
             ids = combined.get('ids', [])
             error_type = combined.get('error_type', 'unknown')
-            iou = combined.get('iou', 0.0)
+            mean_iou = combined.get('mean_iou', 0.0)
+            results_by_label = combined.get('results_by_label', {})
             
-            # Format: "IDs: [0, 1, 2] | Type: over-coverage | IoU: 85.3%"
-            ids_str = ', '.join(map(str, ids))
-            text = f"IDs: [{ids_str}] | Type: {error_type} | IoU: {iou*100:.1f}%"
+            # Format with mean IoU in header
+            ids_str = ','.join(map(str, ids))
+            mean_percent = mean_iou * 100
             
-            item = QtWidgets.QListWidgetItem(text)
+            # Create a simpler, multi-line format
+            text_lines = []
+            text_lines.append(f"Group #{idx + 1} | IDs: [{ids_str}]")
+            text_lines.append(f"Type: {error_type} | Mean: {mean_percent:.1f}%")
             
-            # Color code based on IoU
-            if iou >= 0.8:
+            
+            # Add per-label IoU
+            for label, data in sorted(results_by_label.items()):  # Sort labels alphabetically
+                label_iou_percent = data['iou'] * 100
+                text_lines.append(f"  • {label}: {label_iou_percent:.1f}%")
+            
+            text = "\n".join(text_lines)
+            
+            item = QtWidgets.QListWidgetItem()
+            item.setData(Qt.DisplayRole, text)
+            item.setData(Qt.UserRole, combined)  # Store full data for later use
+            
+            # Color code based on mean IoU
+            if mean_percent >= 80:
                 item.setBackground(QtGui.QColor("#d4edda"))
                 item.setForeground(QtGui.QColor("#155724"))
-            elif iou >= 0.6:
+            elif mean_percent >= 60:
                 item.setBackground(QtGui.QColor("#fff3cd"))
                 item.setForeground(QtGui.QColor("#856404"))
-            elif iou >= 0.4:
+            elif mean_percent >= 40:
                 item.setBackground(QtGui.QColor("#ffe5b4"))
                 item.setForeground(QtGui.QColor("#8b4513"))
             else:
@@ -3140,6 +3239,65 @@ class MainWindow(QtWidgets.QMainWindow):
                 item.setForeground(QtGui.QColor("#721c24"))
             
             self.combinedShapesList.addItem(item)
+
+    # Enable viewing details and deleting entries:
+    def popCombinedShapesMenu(self, point):
+        """Show context menu for combined shapes list."""
+        item = self.combinedShapesList.itemAt(point)
+        if not item:
+            return
+        
+        menu = QtWidgets.QMenu()
+        view_action = menu.addAction(self.tr("View Details"))
+        delete_action = menu.addAction(self.tr("Delete Entry"))
+        
+        action = menu.exec_(self.combinedShapesList.mapToGlobal(point))
+        
+        if action == view_action:
+            self.viewCombinedShapeDetails(item)
+        elif action == delete_action:
+            self.deleteCombinedShapeEntry(item)
+
+
+    def viewCombinedShapeDetails(self, item):
+        """View details of a combined shape entry."""
+        combined_data = item.data(Qt.UserRole)
+        if not combined_data:
+            return
+        
+        results = combined_data.get('results_by_label', {})
+        error_type = combined_data.get('error_type', 'unknown')
+        shape_ids = combined_data.get('ids', [])
+        mean_iou = combined_data.get('mean_iou', 0.0)
+        
+        self._showCombinedIoUDialogByLabel(results, error_type, shape_ids, mean_iou)
+
+
+    def deleteCombinedShapeEntry(self, item):
+        """Delete a combined shape entry."""
+        combined_data = item.data(Qt.UserRole)
+        if not combined_data:
+            return
+        
+        # Confirm deletion
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            self.tr("Delete Entry"),
+            self.tr("Are you sure you want to delete this combined shape entry?"),
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No
+        )
+        
+        if reply == QtWidgets.QMessageBox.Yes:
+            # Remove from list
+            if combined_data in self.combined_shapes:
+                self.combined_shapes.remove(combined_data)
+            
+            # Update display
+            self.updateCombinedShapesList()
+            
+            # Mark as dirty
+            self.setDirty()
 
     def resetGroundTruth(self):
         """Reset ground truth state."""

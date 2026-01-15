@@ -2888,7 +2888,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             self.tr("Error Type"),
             self.tr("Select error type for this combined shape:"),
-            ["over-coverage", "under-coverage", "misalignment", "fragmentation", "other"],
+            ["missing-instance", "under-coverage", 
+            "wrong-class background", "over-coverage background", 
+            "wrong-class non COI", "over-coverage non COI", 
+            "wrong-class adjacent COI", "wrong-class far COI", "miss-coverage adjacent COI", 
+            "wrong-class non-exist COI", 
+            "groundtruth"],
             0,
             False
         )

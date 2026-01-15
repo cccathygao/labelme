@@ -1272,6 +1272,110 @@ class Canvas(QtWidgets.QWidget):
             logger.error(f"Error calculating shape IoU for label '{shape.label}': {e}")
             return 0.0
 
+    def calculate_class_iou(self, label: str, current_shapes: list[Shape]) -> float:
+        """
+        Calculate IoU for a specific class/label by combining all shapes with that label.
+        
+        Args:
+            label: The class label to calculate IoU for
+            current_shapes: List of all current shapes (from self.shapes or including current drawing)
+            
+        Returns:
+            Class IoU value between 0 and 1
+        """
+        if not self.ground_truth_masks_by_label:
+            return 0.0
+        
+        if label not in self.ground_truth_masks_by_label:
+            logger.debug(f"Label '{label}' not found in ground truth")
+            return 0.0
+        
+        try:
+            from labelme.utils import shape_to_mask, calculate_iou
+            
+            # Get image shape
+            img_shape = self.ground_truth_masks_by_label[label].shape
+            
+            # Create combined mask for all shapes with this label
+            combined_mask = np.zeros(img_shape, dtype=bool)
+            
+            for shape in current_shapes:
+                if shape.label != label:
+                    continue
+                    
+                # Get points from shape
+                points = [[p.x(), p.y()] for p in shape.points]
+                
+                # Handle mask type shapes
+                if shape.shape_type == 'mask' and shape.mask is not None:
+                    shape_mask = np.zeros(img_shape, dtype=bool)
+                    
+                    if len(points) >= 2:
+                        (x1, y1), (x2, y2) = points[0], points[1]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        
+                        # Ensure coordinates are within bounds
+                        x1 = max(0, min(x1, img_shape[1] - 1))
+                        y1 = max(0, min(y1, img_shape[0] - 1))
+                        x2 = max(0, min(x2, img_shape[1]))
+                        y2 = max(0, min(y2, img_shape[0]))
+                        
+                        if x2 > x1 and y2 > y1:
+                            mask_h, mask_w = shape.mask.shape
+                            shape_mask[y1:min(y2, y1+mask_h), x1:min(x2, x1+mask_w)] = shape.mask[:min(y2-y1, mask_h), :min(x2-x1, mask_w)]
+                else:
+                    # Handle regular shapes
+                    if len(points) < 2:
+                        continue
+                    
+                    shape_mask = shape_to_mask(
+                        img_shape=img_shape,
+                        points=points,
+                        shape_type=shape.shape_type if shape.shape_type != 'polygon' else None
+                    )
+                
+                # Combine masks using logical OR
+                combined_mask = np.logical_or(combined_mask, shape_mask)
+            
+            # Calculate IoU for this class
+            class_iou = calculate_iou(self.ground_truth_masks_by_label[label], combined_mask)
+            return class_iou
+            
+        except Exception as e:
+            logger.error(f"Error calculating class IoU for label '{label}': {e}")
+            return 0.0
+
+
+    def calculate_all_class_ious(self) -> dict[str, float]:
+        """
+        Calculate class IoU for all labels in ground truth.
+        
+        Returns:
+            Dictionary mapping label -> class IoU
+        """
+        if not self.ground_truth_masks_by_label:
+            return {}
+        
+        class_ious = {}
+        for label in self.ground_truth_masks_by_label.keys():
+            class_iou = self.calculate_class_iou(label, self.shapes)
+            class_ious[label] = class_iou
+        
+        return class_ious
+
+
+    def calculate_average_class_iou(self) -> float:
+        """
+        Calculate average of all class IoUs.
+        
+        Returns:
+            Average class IoU value between 0 and 1
+        """
+        class_ious = self.calculate_all_class_ious()
+        if not class_ious:
+            return 0.0
+        
+        return sum(class_ious.values()) / len(class_ious)
 
 def _update_shape_with_sam(
     sam: osam.types.Model,

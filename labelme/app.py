@@ -111,6 +111,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ground_truth_file = None
         self.ground_truth_shapes = []
         self.shapes_iou_cache = {}  # Cache IoU values for existing shapes
+        self.class_iou_cache = {}  # Cache class IoU values for each label
         self.next_shape_id = 0 # Counter for assigning shape ids
         self.combined_shapes = [] # List of combined shape records
 
@@ -211,7 +212,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.shapeMoved.connect(self.setDirty)
         self.canvas.selectionChanged.connect(self.shapeSelectionChanged)
         self.canvas.drawingPolygon.connect(self.toggleDrawingSensitive)
-        self.canvas.iouUpdated.connect(self.updateIoUDisplay)
         self.canvas.shapeMoved.connect(self.updateShapeIoUCache)
         print(f'cathy debug: IoU signal connected to updateIouDisplay')
 
@@ -922,13 +922,14 @@ class MainWindow(QtWidgets.QMainWindow):
             "border-radius: 3px; min-width: 60px;"
         )
         self.iou_value_label.setAlignment(Qt.AlignCenter)
+        self.iou_value_label.setToolTip(self.tr("Average Class IoU across all labels"))
         iou_layout.addWidget(self.iou_value_label)
 
         # Button to show IoU for all shapes
         self.show_all_iou_btn = QtWidgets.QPushButton(self.tr("All"))
-        self.show_all_iou_btn.setToolTip(self.tr("Show IoU for all shapes"))
+        self.show_all_iou_btn.setToolTip(self.tr("Show Class IoU for all labels"))
         self.show_all_iou_btn.setMaximumWidth(40)
-        self.show_all_iou_btn.clicked.connect(self.showAllShapesIoU)
+        self.show_all_iou_btn.clicked.connect(self.showAllClassIoU)
         iou_layout.addWidget(self.show_all_iou_btn)
 
         self.iou_widget.setLayout(iou_layout)
@@ -1200,6 +1201,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.combined_shapes = []  
         self.combinedShapesList.clear()  
 
+        self.class_iou_cache.clear()
+        self.updateIoUDisplay(0.0)
+
 
     def currentItem(self):
         items = self.labelList.selectedItems()
@@ -1221,6 +1225,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.labelList.clear()
         self.loadShapes(self.canvas.shapes)
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
+
+        if self.canvas.ground_truth_masks_by_label:
+            self.calculateExistingShapesIoU()  # This already calls updateClassIoUCache at the end
 
     def tutorial(self):
         url = "https://github.com/labelmeai/labelme/tree/main/examples/tutorial"  # NOQA
@@ -1649,6 +1656,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.loadShapes(self._copied_shapes, replace=False)
         self.setDirty()
 
+        if self.canvas.ground_truth_masks_by_label:
+            # Calculate IoU for pasted shapes
+            for shape in self._copied_shapes:
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+            self.updateClassIoUCache()
+
     def copySelectedShape(self):
         self._copied_shapes = [s.copy() for s in self.canvas.selectedShapes]
         self.actions.paste.setEnabled(len(self._copied_shapes) > 0)
@@ -1718,6 +1732,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 if item:
                     text_display = text if shape.group_id is None else f"{text} ({shape.group_id})"
                     self._update_label_text_with_iou(item, shape, text_display)
+                
+                # ADD THIS: Update class IoU cache and display
+                self.updateClassIoUCache()
         else:
             self.canvas.undoLastLine()
             self.canvas.shapesBackups.pop()
@@ -2304,6 +2321,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     action.setEnabled(False)
         self.setDirty()
 
+        if self.canvas.ground_truth_masks_by_label:
+            self.updateClassIoUCache()
+
     def deleteSelectedShape(self):
         yes, no = QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No
         msg = self.tr(
@@ -2317,6 +2337,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.noShapes():
                 for action in self.on_shapes_present_actions:
                     action.setEnabled(False)
+            
+            # ADD THIS: Update class IoU after deletion
+            if self.canvas.ground_truth_masks_by_label:
+                self.updateClassIoUCache()
 
     def copyShape(self):
         self.canvas.endMove(copy=True)
@@ -2324,6 +2348,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.addLabel(shape)
         self.labelList.clearSelection()
         self.setDirty()
+
+        if self.canvas.ground_truth_masks_by_label:
+            self.updateClassIoUCache()
 
     def moveShape(self):
         self.canvas.endMove(copy=False)
@@ -2515,6 +2542,9 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Calculate IoU for all existing shapes
             self.calculateExistingShapesIoU()
+
+            # Calculate class IoU for all labels
+            self.updateClassIoUCache()
             
             # Show status message
             labels_info = ', '.join([f"{label} ({mask.sum()} pixels)" 
@@ -2537,7 +2567,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def calculateExistingShapesIoU(self):
         """Calculate IoU for all existing shapes against ground truth."""
-        if self.canvas.ground_truth_masks_by_label is None:
+        if not self.canvas.ground_truth_masks_by_label:
             return
         
         self.shapes_iou_cache.clear()
@@ -2551,8 +2581,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
         logger.info(f"Calculated IoU for {len(self.shapes_iou_cache)} shapes")
         
-        # Add these lines
         self.updateAllShapeIoUDisplays()
+        
+        # ADD THIS: Update class IoU cache
+        self.updateClassIoUCache()
         
 
     def showAllShapesIoU(self):
@@ -2647,22 +2679,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def updateIoUDisplay(self, iou_value: float):
-        """Update IoU display with new value (for currently drawing shape)."""
+        """Update IoU display with average class IoU value."""
         
-        print(f'cathy debug: updateIoUDisplay is called, iou: {iou_value}')
+        print(f'cathy debug: updateIoUDisplay is called, avg class IoU: {iou_value}')
         
         if iou_value == 0.0:
-            self.iou_value_label.setText("0.0")
+            self.iou_value_label.setText("Avg: 0.0")
             self.iou_value_label.setStyleSheet(
                 "font-size: 14px; padding: 2px 8px; "
                 "background-color: #f0f0f0; border-radius: 3px; "
-                "min-width: 60px;"
+                "min-width: 80px;"
             )
         else:
-            # Display IoU as percentage
+            # Display average class IoU as percentage
             iou_percent = iou_value * 100
-            self.iou_value_label.setText(f"{iou_percent:.1f}%")
-            print(f'cathy debug: set label text to {iou_percent:.1f}%')
+            self.iou_value_label.setText(f"Avg: {iou_percent:.1f}%")
+            print(f'cathy debug: set label text to Avg: {iou_percent:.1f}%')
             
             # Color coding
             if iou_percent >= 80:
@@ -2677,30 +2709,150 @@ class MainWindow(QtWidgets.QMainWindow):
             self.iou_value_label.setStyleSheet(
                 f"font-size: 14px; padding: 2px 8px; "
                 f"background-color: {bg_color}; color: {text_color}; "
-                f"border-radius: 3px; min-width: 60px; font-weight: bold;"
+                f"border-radius: 3px; min-width: 80px; font-weight: bold;"
             )
 
     def updateShapeIoUCache(self):
         """Update IoU cache for shapes that were just moved."""
-        if self.canvas.ground_truth_masks_by_label is None:
+        if self.canvas.ground_truth_masks_by_label:
+            shapes_to_update = []
+            if self.canvas.hShape:
+                shapes_to_update.append(self.canvas.hShape)
+            
+            for shape in self.canvas.selectedShapes:
+                if shape and shape not in shapes_to_update:
+                    shapes_to_update.append(shape)
+            
+            for shape in shapes_to_update:
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+                
+                item = self.labelList.findItemByShape(shape)
+                if item:
+                    text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+                    self._update_label_text_with_iou(item, shape, text)
+            
+            # ADD THIS: Update class IoU after shape movement
+            self.updateClassIoUCache()
+
+    def updateClassIoUCache(self):
+        """Update class IoU cache for all labels."""
+        if not self.canvas.ground_truth_masks_by_label:
+            self.class_iou_cache.clear()
+            self.updateIoUDisplay(0.0)
             return
         
-        shapes_to_update = []
-        if self.canvas.hShape:
-            shapes_to_update.append(self.canvas.hShape)
+        self.class_iou_cache = self.canvas.calculate_all_class_ious()
+        logger.debug(f"Updated class IoU cache: {self.class_iou_cache}")
         
-        for shape in self.canvas.selectedShapes:
-            if shape and shape not in shapes_to_update:
-                shapes_to_update.append(shape)
+        # Update average IoU display
+        avg_iou = self.canvas.calculate_average_class_iou()
+        self.updateIoUDisplay(avg_iou)
         
-        for shape in shapes_to_update:
-            iou = self.canvas.calculate_shape_iou(shape)
-            self.shapes_iou_cache[id(shape)] = iou
-            
-            item = self.labelList.findItemByShape(shape)
+        # Update label list display
+        self.updateLabelListWithClassIoU()
+
+    def updateLabelListWithClassIoU(self):
+        """Update the Label List widget to show class IoU for each label."""
+        # This updates the unique label list on the right side
+        for i in range(self.uniqLabelList.count()):
+            item = self.uniqLabelList.item(i)
             if item:
-                text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
-                self._update_label_text_with_iou(item, shape, text)
+                label = item.data(Qt.UserRole)
+                if label in self.class_iou_cache:
+                    class_iou = self.class_iou_cache[label]
+                    # Update item text to include class IoU
+                    item.setText(f"{label} [{class_iou*100:.1f}%]")
+                else:
+                    item.setText(label)
+
+    def showAllClassIoU(self):
+        """Display class IoU for all labels in a dialog."""
+        if not self.class_iou_cache and self.canvas.ground_truth_masks_by_label:
+            self.updateClassIoUCache()
+        
+        if not self.class_iou_cache:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("No Class IoU"),
+                self.tr("No class IoU values available.\n"
+                    "Please ensure ground truth is loaded.")
+            )
+            return
+        
+        # Create dialog
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("Class IoU Values"))
+        dialog.setMinimumWidth(400)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Title
+        title_label = QtWidgets.QLabel(
+            f"<h3>{self.tr('Class IoU for All Labels')}</h3>"
+        )
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Create table
+        table = QtWidgets.QTableWidget()
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels([self.tr("Label"), self.tr("Class IoU")])
+        table.setRowCount(len(self.class_iou_cache))
+        
+        # Populate table
+        row = 0
+        for label, class_iou in sorted(self.class_iou_cache.items()):
+            # Label
+            label_item = QtWidgets.QTableWidgetItem(label)
+            table.setItem(row, 0, label_item)
+            
+            # Class IoU with color coding
+            iou_item = QtWidgets.QTableWidgetItem(f"{class_iou*100:.1f}%")
+            iou_item.setTextAlignment(Qt.AlignCenter)
+            
+            # Color code based on IoU
+            if class_iou >= 0.8:
+                iou_item.setBackground(QtGui.QColor("#d4edda"))
+                iou_item.setForeground(QtGui.QColor("#155724"))
+            elif class_iou >= 0.6:
+                iou_item.setBackground(QtGui.QColor("#fff3cd"))
+                iou_item.setForeground(QtGui.QColor("#856404"))
+            elif class_iou >= 0.4:
+                iou_item.setBackground(QtGui.QColor("#ffe5b4"))
+                iou_item.setForeground(QtGui.QColor("#8b4513"))
+            else:
+                iou_item.setBackground(QtGui.QColor("#f8d7da"))
+                iou_item.setForeground(QtGui.QColor("#721c24"))
+            
+            table.setItem(row, 1, iou_item)
+            row += 1
+        
+        table.resizeColumnsToContents()
+        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        layout.addWidget(table)
+        
+        # Add statistics
+        if self.class_iou_cache:
+            avg_class_iou = sum(self.class_iou_cache.values()) / len(self.class_iou_cache)
+            max_class_iou = max(self.class_iou_cache.values())
+            min_class_iou = min(self.class_iou_cache.values())
+            
+            stats_label = QtWidgets.QLabel(
+                f"<b>{self.tr('Statistics')}:</b><br>"
+                f"{self.tr('Average Class IoU')}: {avg_class_iou*100:.1f}%<br>"
+                f"{self.tr('Maximum Class IoU')}: {max_class_iou*100:.1f}%<br>"
+                f"{self.tr('Minimum Class IoU')}: {min_class_iou*100:.1f}%"
+            )
+            layout.addWidget(stats_label)
+        
+        # Close button
+        close_btn = QtWidgets.QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     def calculateCombinedShapesIoU(self):
         """Calculate IoU for multiple selected shapes combined (per label)."""

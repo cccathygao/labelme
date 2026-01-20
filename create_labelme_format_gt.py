@@ -2,7 +2,7 @@
 """
 create_labelme_format_gt.py
 
-Convert referring segmentation dataset entry to labelme format.
+Convert semantic segmentation groundtruth data (Cityscape) to labelme format.
 Usage: python create_labelme_format_gt.py --image_id 63509
 """
 
@@ -15,7 +15,6 @@ import re
 from typing import List, Dict, Any
 from PIL import Image
 from labelme._label_file import LabelFile
-from labelme import __version__
 
 def parse_segmentation_string(seg_string: str) -> List[List[List[float]]]:
     """
@@ -44,62 +43,60 @@ def parse_segmentation_string(seg_string: str) -> List[List[List[float]]]:
     
     return all_shapes_points
 
-def convert_to_labelme_format(image_id, dataset_json_path, image_dir):
+def convert_to_labelme_format(image_id, output_dir, gt_labels):
     """
-    Convert referring segmentation dataset entry to labelme format.
+    Convert semantic segmentation groundtruth data (Cityscape) to labelme format.
     
     Args:
         image_id: Image ID (e.g., 63509)
-        dataset_json_path: Path to dataset.json
-        image_dir: Directory containing images; also directory to save gt JSON files
+        output_dir: Directory containing images; also directory to save gt JSON files
     """
-    # Load dataset
-    with open(dataset_json_path, 'r') as f:
-        dataset = json.load(f)
+    # Load data
+    gt_json_path = osp.join(output_dir, f'{image_id}_gtFine_polygons.json')
+    with open(gt_json_path, 'r') as f:
+        data = json.load(f)
     
-    # Find entry with matching image_id
-    entry = dataset[image_id]
+    image_height = data['imgHeight']
+    image_width = data['imgWidth']
+    objects = data['objects']
+    shapes = []
+    id = 0
+    for item in objects:
+        if item['label'] in gt_labels:
+            shape = {
+                "id": id,
+                "label": item['label'],
+                "error_type": "groundtruth",
+                "points": item['polygon'],
+                "group_id": None,
+                "shape_type": "polygon",
+                "flags": {}
+            }
+            shapes.append(shape)
+            id += 1
+
+    shapes.sort(key=lambda x:x['label'])
     
-    # Extract data from entry
-    problem = entry['problem']
-    segstr = entry['answer']  # Should be <seg>...</seg> string
-    image_path = f'{image_id}_gt.png'
-    image_height = entry['img_height']
-    image_width = entry['img_width']
+    image_path = f'{image_id}.png'
     
     # Generate imageData
     # image_data_bytes = LabelFile.load_image_file(image_path)
     # image_data_b64 = base64.b64encode(image_data_bytes).decode('utf-8')
-    
-    # Parse the segmentation string
-    all_shapes_points = parse_segmentation_string(segstr)
-    
-    # Create shapes list
-    shapes = []
-    for points in all_shapes_points:
-        shape = {
-            "label": problem,
-            "points": points,
-            "group_id": None,
-            "shape_type": "polygon",
-            "flags": {}
-        }
-        shapes.append(shape)
-    
+
     # Create labelme format JSON
     labelme_data = {
-        "version": __version__,
+        "version": "labelme_semantic_seg",
         "flags": {},
         "shapes": shapes,
         "imagePath": image_path,
         "imageData": None,
         "imageHeight": image_height,
         "imageWidth": image_width,
-        "problem": problem,
+        "gt_labels": gt_labels,
     }
     
     # Save to file
-    output_file = osp.join(image_dir, f"{image_id}_gt.json")
+    output_file = osp.join(output_dir, f"{image_id}_gt.json")
     with open(output_file, 'w') as f:
         json.dump(labelme_data, f, indent=2, ensure_ascii=False)
     
@@ -108,7 +105,7 @@ def convert_to_labelme_format(image_id, dataset_json_path, image_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert dataset entry to labelme format GT file"
+        description="Convert groundturth data to labelme format GT file"
     )
     parser.add_argument(
         '--image_id',
@@ -116,19 +113,24 @@ def main():
         required=True,
         help='Image ID to convert (e.g., 63509)'
     )
+    parser.add_argument(
+        '--gt_labels',
+        nargs='+',
+        type=str,
+        required=True,
+        help='Groundtruth labels'
+    )
     
     args = parser.parse_args()
     
-    # Hardcoded paths
-    IMAGE_DIR = 'output/'
-    DATASET_JSON = 'grefcoco_dataset/dataset.json'
+    OUTPUT_DIR = 'temp/'
     
     # Convert
     try:
         convert_to_labelme_format(
             image_id=args.image_id,
-            dataset_json_path=DATASET_JSON,
-            image_dir=IMAGE_DIR
+            output_dir=OUTPUT_DIR,
+            gt_labels=args.gt_labels
         )
     except Exception as e:
         print(f"✗ Error: {e}")

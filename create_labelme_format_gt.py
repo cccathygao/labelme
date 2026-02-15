@@ -52,7 +52,7 @@ def convert_to_labelme_format(image_id, output_dir, gt_labels):
         output_dir: Directory containing images; also directory to save gt JSON files
     """
     # Load data
-    gt_json_path = osp.join(output_dir, f'{image_id}_gtFine_polygons.json')
+    gt_json_path = osp.join(output_dir, f'{image_id}.json')
     with open(gt_json_path, 'r') as f:
         data = json.load(f)
     

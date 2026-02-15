@@ -650,6 +650,13 @@ class MainWindow(QtWidgets.QMainWindow):
             tip=self.tr("Calculate IoU for selected shapes combined"),
         )
 
+        selectAllShapes = action(
+            text=self.tr("Select All Shapes"),
+            slot=self.selectAllShapes,
+            shortcut="Ctrl+A",
+            icon="objects",
+            tip=self.tr("Select all shapes in the image"),
+        )
 
         # Label list context menu.
         labelMenu = QtWidgets.QMenu()
@@ -729,6 +736,7 @@ class MainWindow(QtWidgets.QMainWindow):
             openPrevImg=openPrevImg,
             loadGroundTruth=loadGroundTruth,
             calculateCombinedIoU=calculateCombinedIoU,
+            selectAllShapes=selectAllShapes,
         )
         self.on_shapes_present_actions = (saveAs, hideAll, showAll, toggleAll)
 
@@ -964,6 +972,7 @@ class MainWindow(QtWidgets.QMainWindow):
             deleteFile,
             None, # separator
             iou_widget_action,  # Add IoU widget here
+            selectAllShapes,  # ADD THIS - before calculate button
             calculateCombinedIoU,
             None,
             createMode,
@@ -1367,11 +1376,21 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         self.canvas.storeShapes()
+        
+        # ADDED: Track if any labels changed for IoU recalculation
+        labels_changed = False
+        
         for item in items:
             shape: Shape = item.shape()  # type: ignore[no-redef]
+            
+            # ADDED: Track old label to know if it changed
+            old_label = shape.label
 
             if edit_text:
                 shape.label = text
+                # ADDED: Check if label actually changed
+                if old_label != text:
+                    labels_changed = True
             if edit_flags:
                 shape.flags = flags
             if edit_group_id:
@@ -1384,14 +1403,25 @@ class MainWindow(QtWidgets.QMainWindow):
                 text = f"[{shape.shape_id}] {shape.label}"
             else:
                 text = f"[{shape.shape_id}] {shape.label} ({shape.group_id})"
+            
+            # ADDED: Recalculate IoU if label changed
+            if labels_changed and self.canvas.ground_truth_masks_by_label:
+                # Recalculate IoU with new label
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+                logger.debug(f"Label changed from '{old_label}' to '{shape.label}', new IoU: {iou:.4f}")
+            
             self._update_label_text_with_iou(item, shape, text)
 
-            
             self.setDirty()
             if self.uniqLabelList.find_label_item(shape.label) is None:
                 self.uniqLabelList.add_label_item(
                     label=shape.label, color=self._get_rgb_by_label(label=shape.label)
                 )
+        
+        # ADDED: Update class IoU cache if any labels changed
+        if labels_changed and self.canvas.ground_truth_masks_by_label:
+            self.updateClassIoUCache()
 
     def fileSearchChanged(self):
         self.importDirImages(
@@ -1665,14 +1695,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pasteSelectedShape()
 
     def pasteSelectedShape(self):
-        self.loadShapes(self._copied_shapes, replace=False)
+        """Paste copied shapes with new unique IDs."""
+        if not self._copied_shapes:
+            return
+        
+        # Create new shapes with cleared IDs
+        new_shapes = []
+        for copied_shape in self._copied_shapes:
+            new_shape = copied_shape.copy()
+            # CRITICAL FIX: Clear ID so addLabel assigns a new one
+            new_shape.shape_id = None
+            new_shapes.append(new_shape)
+        
+        self.loadShapes(new_shapes, replace=False)
         self.setDirty()
-
+        
+        # ADDED: Calculate IoU for all pasted shapes
         if self.canvas.ground_truth_masks_by_label:
-            # Calculate IoU for pasted shapes
-            for shape in self._copied_shapes:
+            for shape in new_shapes:
                 iou = self.canvas.calculate_shape_iou(shape)
                 self.shapes_iou_cache[id(shape)] = iou
+                item = self.labelList.findItemByShape(shape)
+                if item:
+                    text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+                    self._update_label_text_with_iou(item, shape, text)
+            
+            # Update class IoU cache after pasting
             self.updateClassIoUCache()
 
     def copySelectedShape(self):
@@ -2355,12 +2403,29 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.updateClassIoUCache()
 
     def copyShape(self):
+        """Copy shapes (via right-click drag) and assign new unique IDs."""
         self.canvas.endMove(copy=True)
+        
+        # The shapes are already in canvas.shapes but need new IDs
         for shape in self.canvas.selectedShapes:
+            # CRITICAL FIX: Assign new unique ID
+            shape.shape_id = self.next_shape_id
+            self.next_shape_id += 1
             self.addLabel(shape)
+            
+            # ADDED: Calculate IoU for the duplicated shape
+            if self.canvas.ground_truth_masks_by_label:
+                iou = self.canvas.calculate_shape_iou(shape)
+                self.shapes_iou_cache[id(shape)] = iou
+                item = self.labelList.findItemByShape(shape)
+                if item:
+                    text = shape.label if shape.group_id is None else f"{shape.label} ({shape.group_id})"
+                    self._update_label_text_with_iou(item, shape, text)
+        
         self.labelList.clearSelection()
         self.setDirty()
-
+        
+        # ADDED: Update class IoU cache after duplication
         if self.canvas.ground_truth_masks_by_label:
             self.updateClassIoUCache()
 
@@ -2866,6 +2931,31 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
 
+    def selectAllShapes(self):
+        """Select all shapes in the image."""
+        if not self.canvas.shapes:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("No Shapes"),
+                self.tr("No shapes found in the image to select.")
+            )
+            return
+        
+        # Select all shapes
+        self.canvas.selectShapes(self.canvas.shapes)
+        
+        # Show confirmation message
+        num_shapes = len(self.canvas.shapes)
+        labels = {}
+        for shape in self.canvas.shapes:
+            labels[shape.label] = labels.get(shape.label, 0) + 1
+        
+        labels_str = ", ".join([f"{label}: {count}" for label, count in sorted(labels.items())])
+        
+        self.show_status_message(
+            self.tr(f"Selected all {num_shapes} shapes ({labels_str})")
+        )
+
     def calculateCombinedShapesIoU(self):
         """Calculate IoU for multiple selected shapes combined (per label)."""
         if not self.canvas.ground_truth_masks_by_label:
@@ -2889,10 +2979,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             self.tr("Error Type"),
             self.tr("Select error type for this combined shape:"),
-            ["missing-instance", "under-coverage", 
+            ["groundtruth", 
+            "missing-instance", "under-coverage", 
             "over-coverage",
-            "wrong-class non COI", "wrong-class COI",
-            "groundtruth"],
+            "wrong-class non COI", "wrong-class COI"],
             0,
             False
         )

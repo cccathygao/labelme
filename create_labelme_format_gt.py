@@ -52,7 +52,8 @@ def convert_to_labelme_format(image_id, output_dir, gt_labels):
         output_dir: Directory containing images; also directory to save gt JSON files
     """
     # Load data
-    gt_json_path = osp.join(output_dir, f'{image_id}.json')
+    gt_json_path = osp.join(output_dir, f'{image_id}_original.json')
+    print(f'Loading groundtruth json: {gt_json_path}')
     with open(gt_json_path, 'r') as f:
         data = json.load(f)
     
@@ -122,6 +123,14 @@ def main():
     )
     
     args = parser.parse_args()
+
+    processed_labels = []
+    for item in args.gt_labels:
+        # Split by comma and strip any surrounding whitespace
+        split_items = [x.strip() for x in item.split(',') if x.strip()]
+        processed_labels.extend(split_items)
+    
+    args.gt_labels = processed_labels
     
     OUTPUT_DIR = 'temp/'
     

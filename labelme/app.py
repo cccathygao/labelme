@@ -2883,7 +2883,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr("Please select at least one shape to calculate combined IoU.")
             )
             return
-
+        
+        # Prompt for error type FIRST
         error_type, ok = QtWidgets.QInputDialog.getItem(
             self,
             self.tr("Error Type"),
@@ -2897,37 +2898,35 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         
         if not ok:
-            # User cancelled
             return
-    
+        
         try:
             from labelme.utils import shape_to_mask, calculate_iou
             
             # Get image shape
             img_shape = next(iter(self.canvas.ground_truth_masks_by_label.values())).shape
             
-            # CHANGED: Group selected shapes by label
+            # Group selected shapes by label
             shapes_by_label = {}
             for shape in self.canvas.selectedShapes:
                 if shape.label not in shapes_by_label:
                     shapes_by_label[shape.label] = []
                 shapes_by_label[shape.label].append(shape)
             
-            # Calculate IoU for each label group
+            # FIXED: Calculate IoU for ALL labels in ground truth, not just selected labels
             results = {}
             all_shape_ids = []
-
-            for label, shapes in shapes_by_label.items():
-                if label not in self.canvas.ground_truth_masks_by_label:
-                    logger.warning(f"Label '{label}' not found in ground truth")
-                    continue
-                
+            
+            for label in self.canvas.ground_truth_masks_by_label.keys():  # CHANGED: Iterate over ALL ground truth labels
                 # Create combined mask for this label
                 combined_mask = np.zeros(img_shape, dtype=bool)
                 
-                for shape in shapes:
+                # Get shapes for this label (may be empty)
+                shapes_for_label = shapes_by_label.get(label, [])
+                
+                for shape in shapes_for_label:
                     all_shape_ids.append(shape.shape_id)
-
+                    
                     # Get points from shape
                     points = [[p.x(), p.y()] for p in shape.points]
                     
@@ -2962,34 +2961,38 @@ class MainWindow(QtWidgets.QMainWindow):
                     # Combine masks using logical OR
                     combined_mask = np.logical_or(combined_mask, shape_mask)
                 
-                # Calculate IoU for this label
+                # Calculate IoU for this label (even if no shapes selected for it)
                 label_iou = calculate_iou(self.canvas.ground_truth_masks_by_label[label], combined_mask)
                 results[label] = {
                     'iou': label_iou,
-                    'num_shapes': len(shapes),
-                    'shape_ids': [s.shape_id for s in shapes]
+                    'num_shapes': len(shapes_for_label),
+                    'shape_ids': [s.shape_id for s in shapes_for_label]
                 }
+                
+                if len(shapes_for_label) == 0:
+                    logger.debug(f"No shapes selected for label '{label}', IoU = 0.0")
             
-            # Calculate mean IoU across all labels
+            # Calculate mean IoU across ALL labels in ground truth
             mean_iou = sum(r['iou'] for r in results.values()) / len(results) if results else 0.0
-
+            
+            # Create combined shape record with all details
             combined_shape_record = {
                 'ids': sorted(all_shape_ids),
                 'error_type': error_type,
-                'results_by_label': results,  # Store per-label results
-                'mean_iou': mean_iou  # Store mean IoU
+                'results_by_label': results,
+                'mean_iou': mean_iou
             }
             self.combined_shapes.append(combined_shape_record)
             
-            # CHANGED: Update the combined shapes list widget
+            # Update the combined shapes list widget
             self.updateCombinedShapesList()
-
+            
             # Mark as dirty to prompt save
             self.setDirty()
-
+            
             # Show results dialog
             self._showCombinedIoUDialogByLabel(results, error_type, all_shape_ids, mean_iou)
-        
+            
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -3026,21 +3029,28 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         layout.addWidget(all_ids_label)
         
-        # Per-label results
+        # Per-label results (ALL labels in ground truth)
         for label, data in results.items():
             group_box = QtWidgets.QGroupBox(f"Label: {label}")
             group_layout = QtWidgets.QVBoxLayout()
             
-            # Shape IDs for this label
-            label_ids_str = ', '.join(map(str, sorted(data['shape_ids'])))
-            ids_label = QtWidgets.QLabel(f"{self.tr('Shape IDs')}: <b>[{label_ids_str}]</b>")
-            group_layout.addWidget(ids_label)
+            # CHANGED: Show different info if no shapes for this label
+            if data['num_shapes'] == 0:
+                no_shapes_label = QtWidgets.QLabel(
+                    f"<i>{self.tr('No shapes selected for this label')}</i>"
+                )
+                group_layout.addWidget(no_shapes_label)
+            else:
+                # Shape IDs for this label
+                label_ids_str = ', '.join(map(str, sorted(data['shape_ids'])))
+                ids_label = QtWidgets.QLabel(f"{self.tr('Shape IDs')}: <b>[{label_ids_str}]</b>")
+                group_layout.addWidget(ids_label)
+                
+                # Number of shapes
+                num_label = QtWidgets.QLabel(f"{self.tr('Number of shapes')}: <b>{data['num_shapes']}</b>")
+                group_layout.addWidget(num_label)
             
-            # Number of shapes
-            num_label = QtWidgets.QLabel(f"{self.tr('Number of shapes')}: <b>{data['num_shapes']}</b>")
-            group_layout.addWidget(num_label)
-            
-            # Class IoU with color coding
+            # Class IoU with color coding (show for all labels)
             iou_percent = data['iou'] * 100
             if iou_percent >= 80:
                 bg_color, text_color = "#d4edda", "#155724"

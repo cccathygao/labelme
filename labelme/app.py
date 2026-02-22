@@ -114,7 +114,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.class_iou_cache = {}  # Cache class IoU values for each label
         self.next_shape_id = 0 # Counter for assigning shape ids
         self.combined_shapes = [] # List of combined shape records
-
+        self.ground_truth_shape_ids = set()
+        
         # Main widgets and related state.
         self.labelDialog = LabelDialog(
             parent=self,
@@ -653,9 +654,17 @@ class MainWindow(QtWidgets.QMainWindow):
         selectAllShapes = action(
             text=self.tr("Select All Shapes"),
             slot=self.selectAllShapes,
-            shortcut="Ctrl+A",
+            shortcut="Ctrl+A+0",
             icon="objects",
             tip=self.tr("Select all shapes in the image"),
+        )
+
+        selectAllGTShapes = action(
+            text=self.tr("Select All GT Shapes"),
+            slot=self.selectAllGTShapes,
+            shortcut="Ctrl+A",
+            icon="objects",
+            tip=self.tr("Select all ground truth shapes"),
         )
 
         # Label list context menu.
@@ -737,6 +746,7 @@ class MainWindow(QtWidgets.QMainWindow):
             loadGroundTruth=loadGroundTruth,
             calculateCombinedIoU=calculateCombinedIoU,
             selectAllShapes=selectAllShapes,
+            selectAllGTShapes=selectAllGTShapes,
         )
         self.on_shapes_present_actions = (saveAs, hideAll, showAll, toggleAll)
 
@@ -973,6 +983,7 @@ class MainWindow(QtWidgets.QMainWindow):
             None, # separator
             iou_widget_action,  # Add IoU widget here
             selectAllShapes,  # ADD THIS - before calculate button
+            selectAllGTShapes,
             calculateCombinedIoU,
             None,
             createMode,
@@ -1221,6 +1232,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.next_shape_id = 0
         self.combined_shapes = []  
         self.combinedShapesList.clear()  
+        self.ground_truth_shape_ids.clear()
 
         self.class_iou_cache.clear()
         self.updateIoUDisplay(0.0)
@@ -1544,6 +1556,10 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 text = f"[{shape_id}] {shape.label} ({shape.group_id})"
         
+        # Add GT marker if this is a ground truth shape
+        if shape.shape_id in self.ground_truth_shape_ids:
+            text = f"[GT] {text}"
+
         r, g, b = shape.fill_color.getRgb()[:3]
         iou = self.shapes_iou_cache.get(id(shape), None)
         
@@ -2561,12 +2577,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def loadGroundTruth(self, filename):
         """Load ground truth annotation from JSON file."""
         print(f'cathy debug: loadGroundTruth called')
+        print(f'cathy debug: filename {filename}')
         try:
             # Load label file
             label_file = LabelFile(filename)
             self.ground_truth_file = filename
             self.ground_truth_shapes = label_file.shapes
-            
+
+            for shape_dict in self.ground_truth_shapes:
+                shape_id = shape_dict.get('other_data', {}).get('id')
+                print(f'cathy debug: gt shape id {shape_id}')
+                self.ground_truth_shape_ids.add(shape_id)
+
             # Check if image is loaded
             if not self.image or self.image.isNull():
                 self.errorMessage(
@@ -2956,6 +2978,46 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr(f"Selected all {num_shapes} shapes ({labels_str})")
         )
 
+    def selectAllGTShapes(self):
+        """Select all ground truth shapes (shapes from loaded ground truth file)."""
+        if not self.ground_truth_shape_ids:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("No Ground Truth"),
+                self.tr("No ground truth loaded. Please load ground truth first (Ctrl+G).")
+            )
+            return
+        
+        # Find all ground truth shapes in current canvas
+        gt_shapes = []
+        for shape in self.canvas.shapes:
+            if shape.shape_id in self.ground_truth_shape_ids:
+                gt_shapes.append(shape)
+        
+        if not gt_shapes:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("No Ground Truth Shapes"),
+                self.tr("No ground truth shapes found in current image.\n"
+                    "Ground truth may have been deleted or not loaded for this image.")
+            )
+            return
+        
+        # Select them
+        self.canvas.selectShapes(gt_shapes)
+        
+        # Show confirmation with label breakdown
+        num_shapes = len(gt_shapes)
+        labels_count = {}
+        for shape in gt_shapes:
+            labels_count[shape.label] = labels_count.get(shape.label, 0) + 1
+        
+        labels_str = ", ".join([f"{label}: {count}" for label, count in sorted(labels_count.items())])
+        
+        self.show_status_message(
+            self.tr(f"Selected {num_shapes} ground truth shape(s) ({labels_str})")
+        )
+
     def calculateCombinedShapesIoU(self):
         """Calculate IoU for multiple selected shapes combined (per label)."""
         if not self.canvas.ground_truth_masks_by_label:
@@ -2980,9 +3042,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Error Type"),
             self.tr("Select error type for this combined shape:"),
             ["groundtruth", 
-            "missing-instance", "under-coverage", 
-            "over-coverage",
-            "wrong-class non COI", "wrong-class COI"],
+            "missing-instance", 
+            "wrong-class non COI", "wrong-class COI",
+            "under-coverage", "over-coverage"
+            ],
             0,
             False
         )
@@ -3407,6 +3470,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ground_truth_file = None
         self.ground_truth_shapes = []
         self.shapes_iou_cache.clear()
+        self.ground_truth_shape_ids.clear()
         self.canvas.ground_truth_masks_by_label = {}  # CHANGED from ground_truth_mask
         self.canvas._last_iou = 0.0
         self.iou_widget.setVisible(True)

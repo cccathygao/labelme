@@ -9,6 +9,7 @@ Usage: python create_labelme_format_gt.py --image_id 63509
 import json
 import base64
 import os.path as osp
+import os
 import argparse
 import json
 import re
